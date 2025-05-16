@@ -115,22 +115,121 @@
             font-weight: bold;
             color: #27ae60;
         }
+        .recording-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        .record-btn {
+            background: #e74c3c;
+            color: white;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .record-btn:hover {
+            background: #c0392b;
+        }
+        .record-btn.recording {
+            animation: pulse 1.5s infinite;
+        }
+        .record-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+        .record-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: white;
+        }
+        .recording .record-indicator {
+            background: #e74c3c;
+        }
+        .timer {
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .tab {
+            padding: 0.5rem 1rem;
+            border: none;
+            background: #f0f2f5;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .tab.active {
+            background: #3498db;
+            color: white;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        #preview {
+            width: 100%;
+            max-width: 640px;
+            margin: 1rem auto;
+            border-radius: 8px;
+            display: none;
+        }
+        .upload-section, .record-section {
+            display: none;
+        }
+        .upload-section.active, .record-section.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Analizador de Presentaciones de Ventas</h1>
         <p class="description">
-            Sube tu grabación de presentación de ventas y recibe retroalimentación detallada sobre tu desempeño.
+            Graba o sube tu presentación de ventas y recibe retroalimentación detallada sobre tu desempeño.
             Formatos soportados: MP3, WAV, M4A, FLAC, MP4, WEBM
         </p>
-        <form class="upload-form" id="uploadForm">
-            <div class="file-input">
-                <input type="file" name="file" accept=".mp3,.wav,.m4a,.flac,.mp4,.webm" required>
-                <p>Arrastra y suelta tu archivo de audio aquí o haz clic para seleccionar</p>
+
+        <div class="tabs">
+            <button class="tab active" data-tab="record">Grabar</button>
+            <button class="tab" data-tab="upload">Subir Archivo</button>
+        </div>
+
+        <div class="record-section active">
+            <video id="preview" autoplay muted></video>
+            <div class="recording-controls">
+                <button id="recordBtn" class="record-btn">
+                    <span class="record-indicator"></span>
+                    <span class="record-text">Iniciar Grabación</span>
+                </button>
+                <div class="timer" id="timer">00:00</div>
             </div>
-            <button type="submit" class="submit-btn">Analizar Presentación</button>
-        </form>
+        </div>
+
+        <div class="upload-section">
+            <form class="upload-form" id="uploadForm">
+                <div class="file-input">
+                    <input type="file" name="file" accept=".mp3,.wav,.m4a,.flac,.mp4,.webm" required>
+                    <p>Arrastra y suelta tu archivo de audio aquí o haz clic para seleccionar</p>
+                </div>
+                <button type="submit" class="submit-btn">Analizar Presentación</button>
+            </form>
+        </div>
         
         <div class="loading" id="loading">
             <div class="spinner"></div>
@@ -197,6 +296,123 @@
             return html;
         }
 
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.upload-section, .record-section').forEach(s => s.classList.remove('active'));
+                tab.classList.add('active');
+                document.querySelector(`.${tab.dataset.tab}-section`).classList.add('active');
+            });
+        });
+
+        // Recording functionality
+        let mediaRecorder;
+        let recordedChunks = [];
+        let startTime;
+        let timerInterval;
+        const recordBtn = document.getElementById('recordBtn');
+        const timer = document.getElementById('timer');
+        const preview = document.getElementById('preview');
+
+        async function setupRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: true,
+                    video: true
+                });
+                
+                preview.srcObject = stream;
+                preview.style.display = 'block';
+                
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'video/webm'
+                });
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.onstop = async () => {
+                    const blob = new Blob(recordedChunks, {
+                        type: 'video/webm'
+                    });
+                    
+                    const formData = new FormData();
+                    formData.append('file', blob, 'recording.webm');
+                    
+                    const loadingDiv = document.getElementById('loading');
+                    const resultDiv = document.getElementById('result');
+                    
+                    try {
+                        loadingDiv.classList.add('active');
+                        resultDiv.innerHTML = '';
+                        
+                        const response = await fetch('/analyze', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        const result = await response.json();
+                        if (response.ok) {
+                            resultDiv.innerHTML = formatResult(result);
+                        } else {
+                            resultDiv.innerHTML = `<div class="error">Error: ${result.error}</div>`;
+                        }
+                    } catch (error) {
+                        resultDiv.innerHTML = `<div class="error">Error: Hubo un problema al procesar tu grabación. Por favor, inténtalo de nuevo.</div>`;
+                    } finally {
+                        loadingDiv.classList.remove('active');
+                    }
+                };
+
+                recordBtn.addEventListener('click', toggleRecording);
+            } catch (err) {
+                console.error('Error accessing media devices:', err);
+                alert('No se pudo acceder al micrófono o la cámara. Por favor, asegúrate de dar los permisos necesarios.');
+            }
+        }
+
+        function updateTimer() {
+            const now = Date.now();
+            const diff = now - startTime;
+            const minutes = Math.floor(diff / 60000);
+            const seconds = Math.floor((diff % 60000) / 1000);
+            timer.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function toggleRecording() {
+            if (mediaRecorder.state === 'inactive') {
+                // Start recording
+                recordedChunks = [];
+                mediaRecorder.start(1000);
+                recordBtn.classList.add('recording');
+                recordBtn.querySelector('.record-text').textContent = 'Detener Grabación';
+                startTime = Date.now();
+                timerInterval = setInterval(updateTimer, 1000);
+            } else {
+                // Stop recording
+                mediaRecorder.stop();
+                recordBtn.classList.remove('recording');
+                recordBtn.querySelector('.record-text').textContent = 'Iniciar Grabación';
+                clearInterval(timerInterval);
+                timer.textContent = '00:00';
+                
+                const tracks = preview.srcObject.getTracks();
+                tracks.forEach(track => track.stop());
+                preview.srcObject = null;
+                preview.style.display = 'none';
+                
+                setupRecording(); // Reset for next recording
+            }
+        }
+
+        // Initialize recording setup
+        setupRecording();
+
+        // Existing upload form handler...
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const form = e.target;
