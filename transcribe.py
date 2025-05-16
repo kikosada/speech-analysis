@@ -481,9 +481,8 @@ class AssemblyAITranscriber:
 
 def main():
     try:
-        # Usar la API key directamente
-        api_key = "58164a3820d84ad4a09a298e2e5fa949"
-        transcriber = AssemblyAITranscriber(api_key=api_key)
+        # Usar la API key del entorno
+        transcriber = AssemblyAITranscriber()
         
         # Solicitar archivo de audio al usuario
         audio_file = input("Ingresa la ruta al archivo de audio: ").strip()
