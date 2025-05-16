@@ -28,11 +28,11 @@ def format_analysis_result(raw_result):
         return {
             'text': raw_result.get('text', ''),
             'scores': {
-                'structure': raw_result.get('structure_score', 0),
-                'persuasion': raw_result.get('persuasion_score', 0),
-                'clarity': raw_result.get('clarity_score', 0),
-                'engagement': raw_result.get('engagement_score', 0),
-                'overall': raw_result.get('overall_score', 0)
+                'clarity': raw_result.get('scores', {}).get('clarity', 0),
+                'engagement': raw_result.get('scores', {}).get('engagement', 0),
+                'persuasion': raw_result.get('scores', {}).get('persuasion', 0),
+                'structure': raw_result.get('scores', {}).get('structure', 0),
+                'overall': raw_result.get('scores', {}).get('overall', 0)
             },
             'feedback': raw_result.get('feedback', []),
             'duration': raw_result.get('audio_duration', 0)
