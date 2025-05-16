@@ -3,8 +3,84 @@ import requests
 import time
 import json
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List, Tuple
 from datetime import datetime
+
+def analyze_sales_pitch(text: str) -> Tuple[Dict[str, int], List[str]]:
+    """
+    Analiza el pitch de ventas y genera puntuaciones y retroalimentación.
+    
+    Args:
+        text: Texto del pitch de ventas
+    
+    Returns:
+        Tuple[Dict[str, int], List[str]]: Puntuaciones y retroalimentación
+    """
+    text = text.lower()
+    
+    # Inicializar puntuaciones
+    scores = {
+        'clarity': 0,
+        'engagement': 0,
+        'persuasion': 0,
+        'structure': 0,
+        'overall': 0
+    }
+    
+    feedback = []
+    
+    # Análisis de claridad
+    clarity_patterns = ['porque', 'es decir', 'por ejemplo', 'significa', 'específicamente']
+    clarity_count = sum(1 for pattern in clarity_patterns if pattern in text)
+    scores['clarity'] = min(clarity_count * 2, 10)
+    
+    if scores['clarity'] < 5:
+        feedback.append("Intenta explicar los conceptos con más claridad usando ejemplos y definiciones específicas.")
+    elif scores['clarity'] >= 8:
+        feedback.append("Excelente claridad en las explicaciones.")
+    
+    # Análisis de engagement
+    engagement_patterns = ['imagina', 'piensa en', 'considera', 'te has preguntado', '?', '¿']
+    engagement_count = sum(1 for pattern in engagement_patterns if pattern in text)
+    scores['engagement'] = min(engagement_count * 2, 10)
+    
+    if scores['engagement'] < 5:
+        feedback.append("Incluye más elementos interactivos y preguntas para mantener la atención del cliente.")
+    elif scores['engagement'] >= 8:
+        feedback.append("Buen trabajo manteniendo al cliente involucrado.")
+    
+    # Análisis de persuasión
+    persuasion_patterns = ['beneficio', 'ventaja', 'valor', 'ahorro', 'mejora', 'garantía', 'único']
+    persuasion_count = sum(1 for pattern in persuasion_patterns if pattern in text)
+    scores['persuasion'] = min(persuasion_count * 2, 10)
+    
+    if scores['persuasion'] < 5:
+        feedback.append("Enfatiza más los beneficios y el valor único de tu producto/servicio.")
+    elif scores['persuasion'] >= 8:
+        feedback.append("Excelente trabajo destacando el valor y los beneficios.")
+    
+    # Análisis de estructura
+    structure_patterns = ['primero', 'segundo', 'finalmente', 'en conclusión', 'por último', 'además']
+    structure_count = sum(1 for pattern in structure_patterns if pattern in text)
+    scores['structure'] = min(structure_count * 2, 10)
+    
+    if scores['structure'] < 5:
+        feedback.append("Mejora la estructura de tu presentación usando conectores y transiciones claras.")
+    elif scores['structure'] >= 8:
+        feedback.append("Buena estructura y organización del pitch.")
+    
+    # Puntuación global
+    scores['overall'] = sum(scores.values()) // 5
+    
+    # Retroalimentación general
+    if scores['overall'] < 5:
+        feedback.append("Tu pitch necesita mejoras significativas. Revisa los puntos anteriores y practica más.")
+    elif scores['overall'] < 8:
+        feedback.append("Tu pitch es bueno pero hay espacio para mejora. Enfócate en los aspectos mencionados arriba.")
+    else:
+        feedback.append("¡Excelente pitch! Mantén este nivel y sigue practicando para perfeccionar aún más.")
+    
+    return scores, feedback
 
 class AssemblyAITranscriber:
     def __init__(self, api_key: Optional[str] = None, output_dir: str = "."):
@@ -88,14 +164,14 @@ class AssemblyAITranscriber:
 
     def transcribe(self, audio_url: str, **kwargs) -> Dict[str, Any]:
         """
-        Transcribe el audio usando AssemblyAI.
+        Transcribe el audio usando AssemblyAI y analiza el pitch.
         
         Args:
             audio_url: URL del archivo de audio
             **kwargs: Parámetros adicionales para la transcripción
         
         Returns:
-            dict: Resultado de la transcripción
+            dict: Resultado de la transcripción y análisis
         """
         print("Iniciando transcripción...")
         
@@ -116,7 +192,17 @@ class AssemblyAITranscriber:
             response.raise_for_status()
             transcript_id = response.json()["id"]
             
-            return self._wait_for_completion(transcript_id)
+            result = self._wait_for_completion(transcript_id)
+            
+            # Analizar el pitch
+            text = result.get('text', '')
+            scores, feedback = analyze_sales_pitch(text)
+            
+            # Añadir resultados del análisis
+            result['scores'] = scores
+            result['feedback'] = feedback
+            
+            return result
         except requests.exceptions.RequestException as e:
             raise RuntimeError(f"Error al iniciar la transcripción: {str(e)}")
 
