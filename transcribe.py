@@ -30,7 +30,11 @@ def analyze_sales_pitch(text: str) -> Tuple[Dict[str, int], List[str]]:
     feedback = []
     
     # Análisis de claridad
-    clarity_patterns = ['porque', 'es decir', 'por ejemplo', 'significa', 'específicamente']
+    clarity_patterns = [
+        'porque', 'es decir', 'por ejemplo', 'significa', 'específicamente',
+        'como', 'tal como', 'esto significa', 'en otras palabras',
+        'características', 'funciona', 'permite', 'ofrece'
+    ]
     clarity_count = sum(1 for pattern in clarity_patterns if pattern in text)
     scores['clarity'] = min(clarity_count * 2, 10)
     
@@ -40,7 +44,11 @@ def analyze_sales_pitch(text: str) -> Tuple[Dict[str, int], List[str]]:
         feedback.append("Excelente claridad en las explicaciones.")
     
     # Análisis de engagement
-    engagement_patterns = ['imagina', 'piensa en', 'considera', 'te has preguntado', '?', '¿']
+    engagement_patterns = [
+        'imagina', 'piensa en', 'considera', 'te has preguntado', '?', '¿',
+        'tu', 'tus', 'te', 'contigo', 'para ti', 'tuyo', 'tuya',
+        'podrás', 'puedes', 'conseguirás', 'obtendrás'
+    ]
     engagement_count = sum(1 for pattern in engagement_patterns if pattern in text)
     scores['engagement'] = min(engagement_count * 2, 10)
     
@@ -50,7 +58,12 @@ def analyze_sales_pitch(text: str) -> Tuple[Dict[str, int], List[str]]:
         feedback.append("Buen trabajo manteniendo al cliente involucrado.")
     
     # Análisis de persuasión
-    persuasion_patterns = ['beneficio', 'ventaja', 'valor', 'ahorro', 'mejora', 'garantía', 'único']
+    persuasion_patterns = [
+        'beneficio', 'ventaja', 'valor', 'ahorro', 'mejora', 'garantía', 'único',
+        'mejor', 'excelente', 'ideal', 'perfecto', 'revolucionario', 'innovador',
+        'calidad', 'premium', 'profesional', 'exclusivo', 'especial', 'oferta',
+        'descuento', 'promoción', 'limitado', 'oportunidad'
+    ]
     persuasion_count = sum(1 for pattern in persuasion_patterns if pattern in text)
     scores['persuasion'] = min(persuasion_count * 2, 10)
     
@@ -60,7 +73,11 @@ def analyze_sales_pitch(text: str) -> Tuple[Dict[str, int], List[str]]:
         feedback.append("Excelente trabajo destacando el valor y los beneficios.")
     
     # Análisis de estructura
-    structure_patterns = ['primero', 'segundo', 'finalmente', 'en conclusión', 'por último', 'además']
+    structure_patterns = [
+        'primero', 'segundo', 'finalmente', 'en conclusión', 'por último', 'además',
+        'también', 'por otro lado', 'asimismo', 'igualmente', 'por lo tanto',
+        'en consecuencia', 'gracias', 'hola', 'presentar', 'presento', 'introducir'
+    ]
     structure_count = sum(1 for pattern in structure_patterns if pattern in text)
     scores['structure'] = min(structure_count * 2, 10)
     
@@ -70,7 +87,11 @@ def analyze_sales_pitch(text: str) -> Tuple[Dict[str, int], List[str]]:
         feedback.append("Buena estructura y organización del pitch.")
     
     # Puntuación global
-    scores['overall'] = sum(scores.values()) // 5
+    non_zero_scores = [score for score in scores.values() if score > 0]
+    if non_zero_scores:
+        scores['overall'] = sum(non_zero_scores) // len(non_zero_scores)
+    else:
+        scores['overall'] = 0
     
     # Retroalimentación general
     if scores['overall'] < 5:
