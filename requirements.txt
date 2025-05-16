@@ -3,4 +3,7 @@ assemblyai==0.23.0
 openai==1.14.0
 python-dotenv==1.0.1
 pathlib==1.0.1
-typing==3.7.4.3 
+typing==3.7.4.3
+flask==3.0.2
+werkzeug==3.0.1
+gunicorn==21.2.0 
