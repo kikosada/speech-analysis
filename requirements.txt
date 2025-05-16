@@ -1,1 +1,6 @@
-requests==2.31.0 
+requests==2.31.0
+assemblyai==0.23.0
+openai==1.14.0
+python-dotenv==1.0.1
+pathlib==1.0.1
+typing==3.7.4.3 

@@ -8,4 +8,13 @@ __pycache__/
 *.m4a
 output/
 transcriptions/
-*.json 
+*.json
+*.log
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+.idea/
+.vscode/ 
