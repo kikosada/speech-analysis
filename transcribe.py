@@ -219,20 +219,19 @@ class AssemblyAITranscriber:
             text = result.get('text', '')
             scores, feedback = analyze_sales_pitch(text)
             
-            # Añadir resultados del análisis
+            # Guardar el resultado completo para referencia
             result['scores'] = scores
             result['feedback'] = feedback
-            
-            # Guardar el resultado completo para referencia
             self.save_transcript(result, "transcript.txt")
             
-            # Asegurarnos de que solo devolvemos lo necesario para el frontend
+            # Devolver solo lo necesario para el frontend
             return {
                 'text': text,
                 'scores': scores,
                 'feedback': feedback,
                 'audio_duration': result.get('audio_duration', 0)
             }
+            
         except requests.exceptions.RequestException as e:
             raise RuntimeError(f"Error al iniciar la transcripción: {str(e)}")
 
