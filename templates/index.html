@@ -205,6 +205,14 @@
             Formatos soportados: MP3, WAV, M4A, FLAC, MP4, WEBM
         </p>
 
+        <div style="text-align:center; margin-bottom:1rem;">
+            <label for="cameraSelect">Cámara:</label>
+            <select id="cameraSelect">
+                <option value="environment">Trasera</option>
+                <option value="user">Frontal</option>
+            </select>
+        </div>
+
         <div class="tabs">
             <button class="tab active" data-tab="record">Grabar</button>
             <button class="tab" data-tab="upload">Subir Archivo</button>
@@ -317,9 +325,11 @@
 
         async function setupRecording() {
             try {
+                const cameraSelect = document.getElementById('cameraSelect');
+                const facingMode = cameraSelect ? cameraSelect.value : "environment";
                 const stream = await navigator.mediaDevices.getUserMedia({
                     audio: true,
-                    video: { facingMode: { ideal: "environment" } }
+                    video: { facingMode: { ideal: facingMode } }
                 });
                 preview.srcObject = stream;
                 preview.style.display = 'block';
@@ -442,6 +452,14 @@
                 submitBtn.disabled = false;
                 loadingDiv.classList.remove('active');
             }
+        });
+
+        document.getElementById('cameraSelect').addEventListener('change', () => {
+            if (preview.srcObject) {
+                preview.srcObject.getTracks().forEach(track => track.stop());
+                preview.srcObject = null;
+            }
+            setupRecording();
         });
     </script>
 </body>
