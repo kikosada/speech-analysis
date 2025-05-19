@@ -360,8 +360,13 @@
                 preview.srcObject = stream;
                 // Aplica la clase de espejo solo si es la cámara frontal
                 if (facingMode === "user") {
-                    preview.classList.add('mirror');
-                    preview.classList.remove('no-mirror');
+                    if (!isMobile()) {
+                        preview.classList.add('mirror');
+                        preview.classList.remove('no-mirror');
+                    } else {
+                        preview.classList.remove('mirror');
+                        preview.classList.remove('no-mirror');
+                    }
                 } else {
                     preview.classList.add('no-mirror');
                     preview.classList.remove('mirror');
@@ -494,6 +499,10 @@
             }
             setupRecording();
         });
+
+        function isMobile() {
+            return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
+        }
     </script>
 </body>
 </html> 
