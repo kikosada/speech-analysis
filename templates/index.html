@@ -187,7 +187,26 @@
             max-width: 640px;
             margin: 1rem auto;
             border-radius: 8px;
-            display: none;
+            background: #e0e0e0;
+            display: block;
+            min-height: 240px;
+            object-fit: cover;
+        }
+        #camera-waiting {
+            position: absolute;
+            left: 0; right: 0; top: 0; bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.8);
+            font-size: 1.2rem;
+            color: #666;
+            z-index: 2;
+        }
+        @media (max-width: 600px) {
+            #preview {
+                min-height: 180px;
+            }
         }
         .upload-section, .record-section {
             display: none;
@@ -218,8 +237,9 @@
             <button class="tab" data-tab="upload">Subir Archivo</button>
         </div>
 
-        <div class="record-section active">
-            <video id="preview" autoplay muted></video>
+        <div class="record-section active" style="position:relative;">
+            <div id="camera-waiting">Esperando cámara...</div>
+            <video id="preview" autoplay muted playsinline></video>
             <div class="recording-controls">
                 <button id="recordBtn" class="record-btn">
                     <span class="record-indicator"></span>
@@ -332,7 +352,8 @@
                     video: { facingMode: { ideal: facingMode } }
                 });
                 preview.srcObject = stream;
-                preview.style.display = 'block';
+                // Oculta el mensaje de espera
+                document.getElementById('camera-waiting').style.display = 'none';
                 
                 mediaRecorder = new MediaRecorder(stream, {
                     mimeType: 'video/webm'
@@ -408,12 +429,11 @@
                 recordBtn.querySelector('.record-text').textContent = 'Iniciar Grabación';
                 clearInterval(timerInterval);
                 timer.textContent = '00:00';
-                
                 const tracks = preview.srcObject.getTracks();
                 tracks.forEach(track => track.stop());
                 preview.srcObject = null;
-                preview.style.display = 'none';
-                
+                // NO ocultar el video, solo mostrar el mensaje de espera
+                document.getElementById('camera-waiting').style.display = 'flex';
                 setupRecording(); // Reset for next recording
             }
         }
