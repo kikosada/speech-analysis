@@ -357,14 +357,18 @@
                 });
                 preview.srcObject = stream;
                 if (!isMobile()) {
+                    // Computadora: siempre espejo
                     preview.classList.add('mirror');
                     preview.classList.remove('no-mirror');
                 } else {
+                    // Celular
                     if (facingMode === "user") {
-                        preview.classList.remove('mirror');
+                        // Frontal: espejo
+                        preview.classList.add('mirror');
                         preview.classList.remove('no-mirror');
                     } else {
-                        preview.classList.add('mirror');
+                        // Trasera: normal
+                        preview.classList.remove('mirror');
                         preview.classList.remove('no-mirror');
                     }
                 }
