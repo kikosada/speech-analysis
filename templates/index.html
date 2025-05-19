@@ -358,19 +358,8 @@
                     video: { facingMode: { ideal: facingMode } }
                 });
                 preview.srcObject = stream;
-                // Aplica la clase de espejo solo si es la cámara frontal
-                if (facingMode === "user") {
-                    if (!isMobile()) {
-                        preview.classList.add('mirror');
-                        preview.classList.remove('no-mirror');
-                    } else {
-                        preview.classList.remove('mirror');
-                        preview.classList.remove('no-mirror');
-                    }
-                } else {
-                    preview.classList.add('no-mirror');
-                    preview.classList.remove('mirror');
-                }
+                preview.classList.add('no-mirror');
+                preview.classList.remove('mirror');
                 document.getElementById('camera-waiting').style.display = 'none';
                 
                 mediaRecorder = new MediaRecorder(stream, {
