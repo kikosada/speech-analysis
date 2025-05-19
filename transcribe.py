@@ -8,99 +8,102 @@ from datetime import datetime
 
 def analyze_sales_pitch(text: str) -> Tuple[Dict[str, int], List[str]]:
     """
-    Analiza el pitch de ventas y genera puntuaciones y retroalimentación.
-    
+    Analiza el pitch de ventas según 10 reglas clave y genera puntuaciones y retroalimentación detallada.
     Args:
         text: Texto del pitch de ventas
-    
     Returns:
         Tuple[Dict[str, int], List[str]]: Puntuaciones y retroalimentación
     """
     text = text.lower()
-    
-    # Inicializar puntuaciones
-    scores = {
-        'clarity': 0,
-        'engagement': 0,
-        'persuasion': 0,
-        'structure': 0,
-        'overall': 0
-    }
-    
+    rules = [
+        {
+            'key': 'conocimiento_producto',
+            'name': 'Conocimiento del producto',
+            'patterns': ['funciona', 'característica', 'beneficio', 'ventaja', 'objeción', 'especificación', 'detalle', 'tecnología', 'proceso', 'cómo', 'por qué'],
+            'feedback': 'Demuestra conocimiento profundo del producto, sus beneficios y posibles objeciones.'
+        },
+        {
+            'key': 'conocimiento_cliente',
+            'name': 'Conocimiento del cliente objetivo',
+            'patterns': ['cliente ideal', 'necesidad', 'problema', 'dolor', 'valor', 'busca', 'importa', 'prioridad', 'perfil', 'segmento', 'mercado objetivo'],
+            'feedback': 'Muestra comprensión de quién es el cliente ideal y sus necesidades.'
+        },
+        {
+            'key': 'propuesta_valor',
+            'name': 'Propuesta de valor clara',
+            'patterns': ['único', 'diferente', 'mejor', 'solución', 'resuelve', 'ventaja competitiva', 'propuesta de valor', 'distinto', 'diferenciador'],
+            'feedback': 'Explica claramente por qué el producto es mejor o diferente y cómo resuelve un problema.'
+        },
+        {
+            'key': 'credibilidad',
+            'name': 'Credibilidad y confianza',
+            'patterns': ['testimonio', 'garantía', 'experiencia', 'marca', 'confianza', 'caso de éxito', 'sólido', 'certificado', 'avalado', 'recomendado'],
+            'feedback': 'Genera confianza a través de testimonios, garantías o experiencia.'
+        },
+        {
+            'key': 'comunicacion',
+            'name': 'Técnicas efectivas de comunicación',
+            'patterns': ['escuchar', 'pregunta', 'cuéntame', 'platícame', '¿', '?', 'adaptar', 'personalizar', 'mensaje', 'interactivo', 'diálogo'],
+            'feedback': 'Utiliza preguntas, escucha activa y adapta el mensaje al cliente.'
+        },
+        {
+            'key': 'demostracion',
+            'name': 'Demostración o prueba del producto',
+            'patterns': ['demostrar', 'mostrar', 'ejemplo', 'prueba', 'caso', 'simulación', 'demo', 'muestra', 'funciona así', 'así se usa'],
+            'feedback': 'Incluye una demostración, ejemplo o prueba del producto.'
+        },
+        {
+            'key': 'urgencia',
+            'name': 'Urgencia o escasez',
+            'patterns': ['oferta limitada', 'solo hoy', 'últimos', 'descuento', 'aprovecha', 'no te lo pierdas', 'por tiempo limitado', 'ahora', 'urgente', 'no disponible después'],
+            'feedback': 'Crea sentido de urgencia o escasez para acelerar la decisión.'
+        },
+        {
+            'key': 'precio',
+            'name': 'Precio y condiciones accesibles',
+            'patterns': ['precio', 'costo', 'valor', 'accesible', 'forma de pago', 'mensualidad', 'financiamiento', 'descuento', 'promoción', 'condiciones', 'flexible'],
+            'feedback': 'Alinea el precio al valor y ofrece condiciones claras y flexibles.'
+        },
+        {
+            'key': 'manejo_objeciones',
+            'name': 'Manejo de objeciones',
+            'patterns': ['entiendo', 'comprendo', 'duda', 'preocupación', 'objeción', 'respuesta', 'resolver', 'argumento', 'competencia', 'resultado', 'solución'],
+            'feedback': 'Responde dudas y objeciones con argumentos sólidos.'
+        },
+        {
+            'key': 'seguimiento',
+            'name': 'Seguimiento postventa',
+            'patterns': ['seguimiento', 'satisfacción', 'recompra', 'recomendación', 'soporte', 'servicio', 'atención', 'resolver problema', 'postventa', 'contacto posterior'],
+            'feedback': 'Asegura satisfacción y fomenta recompra o recomendación.'
+        },
+    ]
+
+    scores = {}
     feedback = []
-    
-    # Análisis de claridad
-    clarity_patterns = [
-        'porque', 'es decir', 'por ejemplo', 'significa', 'específicamente',
-        'como', 'tal como', 'esto significa', 'en otras palabras',
-        'características', 'funciona', 'permite', 'ofrece'
-    ]
-    clarity_count = sum(1 for pattern in clarity_patterns if pattern in text)
-    scores['clarity'] = min(clarity_count * 2, 10)
-    
-    if scores['clarity'] < 5:
-        feedback.append("Intenta explicar los conceptos con más claridad usando ejemplos y definiciones específicas.")
-    elif scores['clarity'] >= 8:
-        feedback.append("Excelente claridad en las explicaciones.")
-    
-    # Análisis de engagement
-    engagement_patterns = [
-        'imagina', 'piensa en', 'considera', 'te has preguntado', '?', '¿',
-        'tu', 'tus', 'te', 'contigo', 'para ti', 'tuyo', 'tuya',
-        'podrás', 'puedes', 'conseguirás', 'obtendrás'
-    ]
-    engagement_count = sum(1 for pattern in engagement_patterns if pattern in text)
-    scores['engagement'] = min(engagement_count * 2, 10)
-    
-    if scores['engagement'] < 5:
-        feedback.append("Incluye más elementos interactivos y preguntas para mantener la atención del cliente.")
-    elif scores['engagement'] >= 8:
-        feedback.append("Buen trabajo manteniendo al cliente involucrado.")
-    
-    # Análisis de persuasión
-    persuasion_patterns = [
-        'beneficio', 'ventaja', 'valor', 'ahorro', 'mejora', 'garantía', 'único',
-        'mejor', 'excelente', 'ideal', 'perfecto', 'revolucionario', 'innovador',
-        'calidad', 'premium', 'profesional', 'exclusivo', 'especial', 'oferta',
-        'descuento', 'promoción', 'limitado', 'oportunidad'
-    ]
-    persuasion_count = sum(1 for pattern in persuasion_patterns if pattern in text)
-    scores['persuasion'] = min(persuasion_count * 2, 10)
-    
-    if scores['persuasion'] < 5:
-        feedback.append("Enfatiza más los beneficios y el valor único de tu producto/servicio.")
-    elif scores['persuasion'] >= 8:
-        feedback.append("Excelente trabajo destacando el valor y los beneficios.")
-    
-    # Análisis de estructura
-    structure_patterns = [
-        'primero', 'segundo', 'finalmente', 'en conclusión', 'por último', 'además',
-        'también', 'por otro lado', 'asimismo', 'igualmente', 'por lo tanto',
-        'en consecuencia', 'gracias', 'hola', 'presentar', 'presento', 'introducir'
-    ]
-    structure_count = sum(1 for pattern in structure_patterns if pattern in text)
-    scores['structure'] = min(structure_count * 2, 10)
-    
-    if scores['structure'] < 5:
-        feedback.append("Mejora la estructura de tu presentación usando conectores y transiciones claras.")
-    elif scores['structure'] >= 8:
-        feedback.append("Buena estructura y organización del pitch.")
-    
-    # Puntuación global
-    non_zero_scores = [score for score in scores.values() if score > 0]
-    if non_zero_scores:
-        scores['overall'] = sum(non_zero_scores) // len(non_zero_scores)
-    else:
-        scores['overall'] = 0
-    
-    # Retroalimentación general
-    if scores['overall'] < 5:
-        feedback.append("Tu pitch necesita mejoras significativas. Revisa los puntos anteriores y practica más.")
-    elif scores['overall'] < 8:
-        feedback.append("Tu pitch es bueno pero hay espacio para mejora. Enfócate en los aspectos mencionados arriba.")
-    else:
-        feedback.append("¡Excelente pitch! Mantén este nivel y sigue practicando para perfeccionar aún más.")
-    
+    total_score = 0
+
+    for rule in rules:
+        count = sum(1 for pattern in rule['patterns'] if pattern in text)
+        # Escalado simple: 0=0, 1=5, 2=8, 3 o más=10
+        if count == 0:
+            score = 0
+            fb = f"❌ {rule['name']}: No se detecta evidencia. {rule['feedback']}"
+        elif count == 1:
+            score = 5
+            fb = f"⚠️ {rule['name']}: Menciona al menos un aspecto, pero puede profundizar más. {rule['feedback']}"
+        elif count == 2:
+            score = 8
+            fb = f"✅ {rule['name']}: Bien cubierto, pero puede ser aún más detallado. {rule['feedback']}"
+        else:
+            score = 10
+            fb = f"🌟 {rule['name']}: Excelente, cubre este aspecto de forma completa. {rule['feedback']}"
+        scores[rule['key']] = score
+        feedback.append(fb)
+        total_score += score
+
+    # Calificación global
+    scores['overall'] = round(total_score / len(rules))
+
     return scores, feedback
 
 class AssemblyAITranscriber:

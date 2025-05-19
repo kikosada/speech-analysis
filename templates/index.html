@@ -276,9 +276,7 @@
     <script>
         function formatResult(result) {
             if (!result) return '';
-            
             let html = '<div class="result-section">';
-            
             // Añadir transcripción si está disponible
             if (result.text) {
                 html += `
@@ -286,36 +284,37 @@
                     <p>${result.text}</p>
                 `;
             }
-            
             // Añadir puntuaciones si están disponibles
             if (result.scores) {
-                html += `
-                    <h3>Puntuaciones</h3>
-                    <ul>
-                        ${Object.entries(result.scores).map(([key, value]) => {
-                            const scoreLabels = {
-                                'structure': 'Estructura',
-                                'persuasion': 'Persuasión',
-                                'clarity': 'Claridad',
-                                'engagement': 'Engagement',
-                                'overall': 'Puntuación Global'
-                            };
-                            return `<li>${scoreLabels[key] || key}: <span class="score">${value}/10</span></li>`;
-                        }).join('')}
-                    </ul>
-                `;
+                const ruleLabels = {
+                    'conocimiento_producto': 'Conocimiento del producto',
+                    'conocimiento_cliente': 'Conocimiento del cliente objetivo',
+                    'propuesta_valor': 'Propuesta de valor clara',
+                    'credibilidad': 'Credibilidad y confianza',
+                    'comunicacion': 'Técnicas efectivas de comunicación',
+                    'demostracion': 'Demostración o prueba del producto',
+                    'urgencia': 'Urgencia o escasez',
+                    'precio': 'Precio y condiciones accesibles',
+                    'manejo_objeciones': 'Manejo de objeciones',
+                    'seguimiento': 'Seguimiento postventa',
+                    'overall': 'Puntuación Global'
+                };
+                html += `<h3>Puntuaciones por regla de venta</h3><ul>`;
+                Object.entries(result.scores).forEach(([key, value]) => {
+                    if (key !== 'overall') {
+                        html += `<li><b>${ruleLabels[key] || key}:</b> <span class="score">${value}/10</span></li>`;
+                    }
+                });
+                html += `</ul><h4>Puntuación Global: <span class="score">${result.scores.overall}/10</span></h4>`;
             }
-            
-            // Añadir retroalimentación si está disponible
+            // Añadir retroalimentación detallada
             if (result.feedback) {
-                html += `
-                    <h3>Retroalimentación</h3>
-                    <ul>
-                        ${result.feedback.map(item => `<li>${item}</li>`).join('')}
-                    </ul>
-                `;
+                html += `<h3>Retroalimentación Detallada</h3><ul>`;
+                result.feedback.forEach(item => {
+                    html += `<li>${item}</li>`;
+                });
+                html += `</ul>`;
             }
-            
             // Añadir duración si está disponible
             if (result.duration) {
                 const minutes = Math.floor(result.duration / 60);
@@ -325,7 +324,6 @@
                     <p>${minutes} minutos y ${seconds} segundos</p>
                 `;
             }
-            
             html += '</div>';
             return html;
         }
