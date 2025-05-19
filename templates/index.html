@@ -287,17 +287,11 @@
             // Añadir puntuaciones si están disponibles
             if (result.scores) {
                 const ruleLabels = {
-                    'conocimiento_producto': 'Conocimiento del producto',
-                    'conocimiento_cliente': 'Conocimiento del cliente objetivo',
-                    'propuesta_valor': 'Propuesta de valor clara',
-                    'credibilidad': 'Credibilidad y confianza',
-                    'comunicacion': 'Técnicas efectivas de comunicación',
-                    'demostracion': 'Demostración o prueba del producto',
-                    'urgencia': 'Urgencia o escasez',
-                    'precio': 'Precio y condiciones accesibles',
-                    'manejo_objeciones': 'Manejo de objeciones',
-                    'seguimiento': 'Seguimiento postventa',
-                    'overall': 'Puntuación Global'
+                    'clarity': 'CLARIDAD',
+                    'engagement': 'ENGANCHE',
+                    'persuasion': 'PERSUASIÓN',
+                    'structure': 'ESTRUCTURA',
+                    'overall': 'PUNTUACIÓN GLOBAL'
                 };
                 html += `<h3>Puntuaciones por regla de venta</h3><ul>`;
                 Object.entries(result.scores).forEach(([key, value]) => {
