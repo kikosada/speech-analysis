@@ -319,9 +319,8 @@
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
                     audio: true,
-                    video: true
+                    video: { facingMode: { ideal: "environment" } }
                 });
-                
                 preview.srcObject = stream;
                 preview.style.display = 'block';
                 
