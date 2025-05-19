@@ -356,8 +356,13 @@
                     video: { facingMode: { ideal: facingMode } }
                 });
                 preview.srcObject = stream;
-                preview.classList.add('mirror');
-                preview.classList.remove('no-mirror');
+                if (facingMode === "user") {
+                    preview.classList.add('mirror');
+                    preview.classList.remove('no-mirror');
+                } else {
+                    preview.classList.remove('mirror');
+                    preview.classList.remove('no-mirror');
+                }
                 document.getElementById('camera-waiting').style.display = 'none';
                 
                 mediaRecorder = new MediaRecorder(stream, {
