@@ -299,6 +299,9 @@
                 <span>Bienvenido, {{ current_user.name }} ({{ current_user.email }})</span>
                 <a href="{{ url_for('logout') }}" style="margin-left:1rem; color:#e74c3c;">Cerrar sesión</a>
             </div>
+            <div style="text-align:right; margin-bottom:1rem;">
+                <a href="{{ url_for('mis_archivos') }}" class="submit-btn" style="background:#6c63ff;">Mis Archivos</a>
+            </div>
             <h1>Analizador de Presentaciones de Ventas</h1>
             <p class="description">
                 Graba o sube tu presentación de ventas y recibe retroalimentación detallada sobre tu desempeño.<br>
