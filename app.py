@@ -152,6 +152,11 @@ def analyze_audio():
         logger.info(f"Intentando guardar archivo en: {filepath}")
         logger.info(f"¿Existe el archivo después de guardar? {os.path.exists(filepath)}")
         
+        # Validar si el archivo está vacío
+        if os.path.getsize(filepath) == 0:
+            logger.error(f"El archivo {filepath} está vacío.")
+            return jsonify({"error": "El archivo grabado está vacío. Por favor, asegúrate de grabar audio y vuelve a intentarlo."}), 400
+        
         # Guardar copia en la carpeta del usuario
         with open(filepath, 'rb') as src, open(user_file_path, 'wb') as dst:
             dst.write(src.read())
