@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, render_template, redirect, url_for, session
+from flask import Flask, jsonify, request, render_template, redirect, url_for, session, send_from_directory
 import os
 from transcribe import AssemblyAITranscriber
 from werkzeug.utils import secure_filename
@@ -200,6 +200,34 @@ def analyze_audio():
 @app.context_processor
 def inject_user():
     return dict(current_user=current_user)
+
+@app.route('/api/mis-archivos')
+@login_required
+def api_mis_archivos():
+    user_folder = os.path.join('user_uploads', current_user.email)
+    if not os.path.exists(user_folder):
+        return jsonify([])
+    archivos = [f for f in os.listdir(user_folder) if os.path.isfile(os.path.join(user_folder, f))]
+    return jsonify(archivos)
+
+@app.route('/mis-archivos')
+@login_required
+def mis_archivos():
+    user_folder = os.path.join('user_uploads', current_user.email)
+    archivos = []
+    if os.path.exists(user_folder):
+        archivos = [f for f in os.listdir(user_folder) if os.path.isfile(os.path.join(user_folder, f))]
+    return render_template('mis_archivos.html', archivos=archivos)
+
+@app.route('/descargar/<filename>')
+@login_required
+def descargar_archivo(filename):
+    user_folder = os.path.join('user_uploads', current_user.email)
+    # Seguridad: solo permite descargar archivos de tu carpeta
+    file_path = os.path.join(user_folder, filename)
+    if not os.path.exists(file_path):
+        return "Archivo no encontrado", 404
+    return send_from_directory(user_folder, filename, as_attachment=True)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))

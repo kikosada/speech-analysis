@@ -1,0 +1,19 @@
+{% extends 'index.html' %}
+{% block content %}
+<div class="container">
+    <h2>Mis Archivos</h2>
+    {% if archivos %}
+        <ul>
+        {% for archivo in archivos %}
+            <li>
+                {{ archivo }}
+                <a href="{{ url_for('descargar_archivo', filename=archivo) }}" style="margin-left:1rem;">Descargar</a>
+            </li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>No tienes archivos guardados.</p>
+    {% endif %}
+    <a href="/" style="display:inline-block;margin-top:1rem;">&larr; Volver al inicio</a>
+</div>
+{% endblock %} 
