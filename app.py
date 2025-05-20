@@ -64,10 +64,10 @@ def login():
 @app.route('/auth/callback')
 def auth_callback():
     token = google.authorize_access_token()
-    userinfo = google.parse_id_token(token)
+    userinfo = token['userinfo']
     user = User(
         id_=userinfo['sub'],
-        name=userinfo['name'],
+        name=userinfo.get('name', ''),
         email=userinfo['email']
     )
     users[user.id] = user
