@@ -127,6 +127,7 @@ def analyze_audio():
             return jsonify({"error": "No se ha subido ningún archivo"}), 400
         
         file = request.files['file']
+        logger.info(f"Archivo recibido: {file.filename}, tipo: {file.content_type}, tamaño: {getattr(file, 'content_length', 'desconocido')}")
         if file.filename == '':
             return jsonify({"error": "No se ha seleccionado ningún archivo"}), 400
         
@@ -138,15 +139,23 @@ def analyze_audio():
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         
-        logger.info(f"Procesando archivo: {filename}")
         # Crear carpeta por usuario
         user_folder = os.path.join('user_uploads', current_user.email)
         os.makedirs(user_folder, exist_ok=True)
+        
         # Nombre único para el archivo
         unique_filename = f"{int(time.time())}_{filename}"
         user_file_path = os.path.join(user_folder, unique_filename)
-        # Guardar copia del archivo subido
-        file.save(user_file_path)
+        
+        # Guardar el archivo en la carpeta de uploads primero
+        file.save(filepath)
+        logger.info(f"Intentando guardar archivo en: {filepath}")
+        logger.info(f"¿Existe el archivo después de guardar? {os.path.exists(filepath)}")
+        
+        # Guardar copia en la carpeta del usuario
+        with open(filepath, 'rb') as src, open(user_file_path, 'wb') as dst:
+            dst.write(src.read())
+        logger.info(f"Copia guardada en: {user_file_path}")
         
         try:
             transcriber = AssemblyAITranscriber()
@@ -154,6 +163,7 @@ def analyze_audio():
             raw_result = transcriber.transcribe(upload_url)
             formatted_result = format_analysis_result(raw_result)
             formatted_result['uploaded_by'] = current_user.email
+            
             # Guardar registro en CSV
             log_path = os.path.join(os.getcwd(), 'uploads_log.csv')
             with open(log_path, 'a', newline='', encoding='utf-8') as csvfile:
