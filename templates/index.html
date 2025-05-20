@@ -224,6 +224,16 @@
 </head>
 <body>
     <div class="container">
+        {% if current_user.is_authenticated %}
+            <div style="text-align:right; margin-bottom:1rem;">
+                <span>Bienvenido, {{ current_user.name }} ({{ current_user.email }})</span>
+                <a href="{{ url_for('logout') }}" style="margin-left:1rem; color:#e74c3c;">Cerrar sesión</a>
+            </div>
+        {% else %}
+            <div style="text-align:right; margin-bottom:1rem;">
+                <a href="{{ url_for('login') }}" style="color:#3498db;">Iniciar sesión con Google</a>
+            </div>
+        {% endif %}
         <h1>Analizador de Presentaciones de Ventas</h1>
         <p class="description">
             Graba o sube tu presentación de ventas y recibe retroalimentación detallada sobre tu desempeño.
