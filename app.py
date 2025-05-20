@@ -7,6 +7,7 @@ from authlib.integrations.flask_client import OAuth
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 import csv
 import datetime
+import time
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "supersecret")
@@ -138,14 +139,20 @@ def analyze_audio():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         
         logger.info(f"Procesando archivo: {filename}")
-        file.save(filepath)
+        # Crear carpeta por usuario
+        user_folder = os.path.join('user_uploads', current_user.email)
+        os.makedirs(user_folder, exist_ok=True)
+        # Nombre único para el archivo
+        unique_filename = f"{int(time.time())}_{filename}"
+        user_file_path = os.path.join(user_folder, unique_filename)
+        # Guardar copia del archivo subido
+        file.save(user_file_path)
         
         try:
             transcriber = AssemblyAITranscriber()
             upload_url = transcriber.upload_file(filepath)
             raw_result = transcriber.transcribe(upload_url)
             formatted_result = format_analysis_result(raw_result)
-            # Guardar el email del usuario que subió el archivo
             formatted_result['uploaded_by'] = current_user.email
             # Guardar registro en CSV
             log_path = os.path.join(os.getcwd(), 'uploads_log.csv')
@@ -154,6 +161,7 @@ def analyze_audio():
                 writer.writerow([
                     current_user.email,
                     filename,
+                    user_file_path,
                     request.remote_addr,
                     datetime.datetime.now().isoformat()
                 ])
