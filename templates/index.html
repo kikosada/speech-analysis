@@ -284,11 +284,13 @@
     </style>
 </head>
 <body>
+{% block content %}
     {% if not current_user.is_authenticated %}
-        <div class="login-outer-center">
-            <div class="login-mobile-box">
-                <div class="login-mobile-title">Inicia sesión para usar el Analizador de Presentaciones de Ventas</div>
-                <a href="{{ url_for('login') }}" class="login-mobile-btn">Iniciar sesión con Google</a>
+        <div class="container">
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;">
+                <h1>Analizador de Presentaciones de Ventas</h1>
+                <p class="description">Inicia sesión con Google para comenzar</p>
+                <a href="{{ url_for('login') }}" class="submit-btn" style="margin-top:2rem;">Iniciar sesión con Google</a>
             </div>
         </div>
     {% else %}
@@ -346,6 +348,7 @@
             <div id="result"></div>
         </div>
     {% endif %}
+{% endblock %}
 
     <script>
         function formatResult(result) {
