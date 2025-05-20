@@ -49,11 +49,11 @@
         .submit-btn {
             background: #3498db;
             color: white;
-            padding: 1rem 2rem;
+            padding: 0.8rem 1.5rem;
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 1.1rem;
+            font-size: 1rem;
             transition: all 0.3s ease;
         }
         .submit-btn:hover {
@@ -64,6 +64,10 @@
             background: #95a5a6;
             cursor: not-allowed;
             transform: none;
+        }
+        .mis-archivos-btn {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
         }
         #result {
             margin-top: 2rem;
@@ -300,7 +304,7 @@
                 <a href="{{ url_for('logout') }}" style="margin-left:1rem; color:#e74c3c;">Cerrar sesión</a>
             </div>
             <div style="text-align:right; margin-bottom:1rem;">
-                <a href="{{ url_for('mis_archivos') }}" class="submit-btn" style="background:#6c63ff;">Mis Archivos</a>
+                <a href="{{ url_for('mis_archivos') }}" class="submit-btn mis-archivos-btn" style="background:#6c63ff;">Mis Archivos</a>
             </div>
             <h1>Analizador de Presentaciones de Ventas</h1>
             <p class="description">
