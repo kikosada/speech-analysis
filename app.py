@@ -1,10 +1,14 @@
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify, request, render_template, redirect, url_for, session
 import os
 from transcribe import AssemblyAITranscriber
 from werkzeug.utils import secure_filename
 import logging
+from authlib.integrations.flask_client import OAuth
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "supersecret")
+oauth = OAuth(app)
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -18,6 +22,65 @@ MAX_CONTENT_LENGTH = 100 * 1024 * 1024  # 100MB tamaño máximo de archivo
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# Configuración de Google OAuth
+app.config['GOOGLE_CLIENT_ID'] = os.environ.get("GOOGLE_CLIENT_ID")
+app.config['GOOGLE_CLIENT_SECRET'] = os.environ.get("GOOGLE_CLIENT_SECRET")
+app.config['GOOGLE_DISCOVERY_URL'] = "https://accounts.google.com/.well-known/openid-configuration"
+
+google = oauth.register(
+    name='google',
+    client_id=app.config['GOOGLE_CLIENT_ID'],
+    client_secret=app.config['GOOGLE_CLIENT_SECRET'],
+    server_metadata_url=app.config['GOOGLE_DISCOVERY_URL'],
+    client_kwargs={
+        'scope': 'openid email profile'
+    }
+)
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+
+class User(UserMixin):
+    def __init__(self, id_, name, email):
+        self.id = id_
+        self.name = name
+        self.email = email
+
+    def get_id(self):
+        return self.id
+
+users = {}
+
+@login_manager.user_loader
+def load_user(user_id):
+    return users.get(user_id)
+
+@app.route('/login')
+def login():
+    redirect_uri = url_for('auth_callback', _external=True)
+    return google.authorize_redirect(redirect_uri)
+
+@app.route('/auth/callback')
+def auth_callback():
+    token = google.authorize_access_token()
+    userinfo = google.parse_id_token(token)
+    user = User(
+        id_=userinfo['sub'],
+        name=userinfo['name'],
+        email=userinfo['email']
+    )
+    users[user.id] = user
+    login_user(user)
+    session['email'] = user.email
+    return redirect(url_for('index'))
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    session.clear()
+    return redirect(url_for('index'))
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -54,6 +117,7 @@ def index():
     return render_template('index.html')
 
 @app.route('/analyze', methods=['POST'])
+@login_required
 def analyze_audio():
     try:
         if 'file' not in request.files:
@@ -79,6 +143,8 @@ def analyze_audio():
             upload_url = transcriber.upload_file(filepath)
             raw_result = transcriber.transcribe(upload_url)
             formatted_result = format_analysis_result(raw_result)
+            # Guardar el email del usuario que subió el archivo
+            formatted_result['uploaded_by'] = current_user.email
             
             logger.info(f"Archivo analizado exitosamente: {filename}")
             return jsonify(formatted_result)
@@ -96,6 +162,10 @@ def analyze_audio():
     except Exception as e:
         logger.error(f"Error inesperado: {str(e)}")
         return jsonify({"error": "Ha ocurrido un error inesperado"}), 500
+
+@app.context_processor
+def inject_user():
+    return dict(current_user=current_user)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
