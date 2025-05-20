@@ -5,6 +5,8 @@ from werkzeug.utils import secure_filename
 import logging
 from authlib.integrations.flask_client import OAuth
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+import csv
+import datetime
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "supersecret")
@@ -145,7 +147,16 @@ def analyze_audio():
             formatted_result = format_analysis_result(raw_result)
             # Guardar el email del usuario que subió el archivo
             formatted_result['uploaded_by'] = current_user.email
-            
+            # Guardar registro en CSV
+            log_path = os.path.join(os.getcwd(), 'uploads_log.csv')
+            with open(log_path, 'a', newline='', encoding='utf-8') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow([
+                    current_user.email,
+                    filename,
+                    request.remote_addr,
+                    datetime.datetime.now().isoformat()
+                ])
             logger.info(f"Archivo analizado exitosamente: {filename}")
             return jsonify(formatted_result)
             
