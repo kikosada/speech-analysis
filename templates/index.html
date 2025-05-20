@@ -223,65 +223,66 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        {% if current_user.is_authenticated %}
+    {% if not current_user.is_authenticated %}
+        <div class="container" style="text-align:center; margin-top:5rem;">
+            <h1>Inicia sesión para usar el Analizador de Presentaciones de Ventas</h1>
+            <a href="{{ url_for('login') }}" class="submit-btn" style="font-size:1.2rem;">Iniciar sesión con Google</a>
+        </div>
+    {% else %}
+        <div class="container">
             <div style="text-align:right; margin-bottom:1rem;">
                 <span>Bienvenido, {{ current_user.name }} ({{ current_user.email }})</span>
                 <a href="{{ url_for('logout') }}" style="margin-left:1rem; color:#e74c3c;">Cerrar sesión</a>
             </div>
-        {% else %}
-            <div style="text-align:right; margin-bottom:1rem;">
-                <a href="{{ url_for('login') }}" style="color:#3498db;">Iniciar sesión con Google</a>
+            <h1>Analizador de Presentaciones de Ventas</h1>
+            <p class="description">
+                Graba o sube tu presentación de ventas y recibe retroalimentación detallada sobre tu desempeño.<br>
+                Formatos soportados: MP3, WAV, M4A, FLAC, MP4, WEBM
+            </p>
+
+            <div style="text-align:center; margin-bottom:1rem;">
+                <label for="cameraSelect">Cámara:</label>
+                <select id="cameraSelect">
+                    <option value="environment">Trasera</option>
+                    <option value="user">Frontal</option>
+                </select>
             </div>
-        {% endif %}
-        <h1>Analizador de Presentaciones de Ventas</h1>
-        <p class="description">
-            Graba o sube tu presentación de ventas y recibe retroalimentación detallada sobre tu desempeño.
-            Formatos soportados: MP3, WAV, M4A, FLAC, MP4, WEBM
-        </p>
 
-        <div style="text-align:center; margin-bottom:1rem;">
-            <label for="cameraSelect">Cámara:</label>
-            <select id="cameraSelect">
-                <option value="environment">Trasera</option>
-                <option value="user">Frontal</option>
-            </select>
-        </div>
-
-        <div class="tabs">
-            <button class="tab active" data-tab="record">Grabar</button>
-            <button class="tab" data-tab="upload">Subir Archivo</button>
-        </div>
-
-        <div class="record-section active" style="position:relative;">
-            <div id="camera-waiting">Esperando cámara...</div>
-            <video id="preview" autoplay muted playsinline></video>
-            <div class="recording-controls">
-                <button id="recordBtn" class="record-btn">
-                    <span class="record-indicator"></span>
-                    <span class="record-text">Iniciar Grabación</span>
-                </button>
-                <div class="timer" id="timer">00:00</div>
+            <div class="tabs">
+                <button class="tab active" data-tab="record">Grabar</button>
+                <button class="tab" data-tab="upload">Subir Archivo</button>
             </div>
-        </div>
 
-        <div class="upload-section">
-            <form class="upload-form" id="uploadForm">
-                <div class="file-input">
-                    <input type="file" name="file" accept=".mp3,.wav,.m4a,.flac,.mp4,.webm" required>
-                    <p>Arrastra y suelta tu archivo de audio aquí o haz clic para seleccionar</p>
+            <div class="record-section active" style="position:relative;">
+                <div id="camera-waiting">Esperando cámara...</div>
+                <video id="preview" autoplay muted playsinline></video>
+                <div class="recording-controls">
+                    <button id="recordBtn" class="record-btn">
+                        <span class="record-indicator"></span>
+                        <span class="record-text">Iniciar Grabación</span>
+                    </button>
+                    <div class="timer" id="timer">00:00</div>
                 </div>
-                <button type="submit" class="submit-btn">Analizar Presentación</button>
-            </form>
+            </div>
+
+            <div class="upload-section">
+                <form class="upload-form" id="uploadForm">
+                    <div class="file-input">
+                        <input type="file" name="file" accept=".mp3,.wav,.m4a,.flac,.mp4,.webm" required>
+                        <p>Arrastra y suelta tu archivo de audio aquí o haz clic para seleccionar</p>
+                    </div>
+                    <button type="submit" class="submit-btn">Analizar Presentación</button>
+                </form>
+            </div>
+            
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Analizando tu presentación... Esto puede tomar unos minutos.</p>
+            </div>
+            
+            <div id="result"></div>
         </div>
-        
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <p>Analizando tu presentación... Esto puede tomar unos minutos.</p>
-        </div>
-        
-        <div id="result"></div>
-    </div>
+    {% endif %}
 
     <script>
         function formatResult(result) {
