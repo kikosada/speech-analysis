@@ -578,7 +578,7 @@
             return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
         }
     </script>
-    {% if current_user.is_authenticated %}
+    {% if current_user.is_authenticated and is_index %}
     <script>
         setupRecording();
     </script>

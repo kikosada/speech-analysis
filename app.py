@@ -117,7 +117,7 @@ def health_check():
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', is_index=True)
 
 @app.route('/analyze', methods=['POST'])
 @login_required
