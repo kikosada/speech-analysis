@@ -189,9 +189,11 @@ def analyze_audio():
                 "error": f"Tipo de archivo no permitido. Formatos soportados: {', '.join(ALLOWED_EXTENSIONS)}"
             }), 400
         
+        # Normalizar el nombre de la empresa para el nombre del archivo
+        empresa_slug = secure_filename(company_name).replace('-', '').replace('_', '')
         filename = secure_filename(file.filename)
         unique_id = f"{int(time.time())}_{uuid.uuid4().hex[:8]}"
-        filename_unique = f"{unique_id}_{filename}"
+        filename_unique = f"recording_{empresa_slug}_{unique_id}_{filename}"
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename_unique)
         
         # Crear carpeta por usuario y empresa
