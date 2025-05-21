@@ -287,6 +287,12 @@ def analyze_audio():
             for item in formatted_result.get('feedback', []):
                 f.write(f"- {item}\n")
 
+        # Subir los txt a Azure Blob Storage en la misma carpeta
+        blob_puntuacion = f"{current_user.email}/{secure_filename(company_name)}/{empresa_slug}_puntuacion.txt"
+        upload_file_to_azure(puntuacion_path, blob_puntuacion)
+        blob_retro = f"{current_user.email}/{secure_filename(company_name)}/{empresa_slug}_retroalimentacion.txt"
+        upload_file_to_azure(retro_path, blob_retro)
+
         return jsonify(formatted_result)
         
     except Exception as e:
