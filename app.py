@@ -13,6 +13,7 @@ from botocore.exceptions import NoCredentialsError
 import tempfile
 from azure.storage.blob import BlobServiceClient, generate_blob_sas, BlobSasPermissions
 from datetime import datetime, timedelta
+import mimetypes
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "supersecret")
@@ -229,6 +230,21 @@ def analyze_audio():
             download_success = download_file_from_azure(blob_name, local_temp_path)
             if not download_success:
                 return jsonify({"error": "No se pudo descargar el archivo de Azure Blob Storage"}), 500
+
+            # Log de depuración: tamaño y tipo de archivo
+            file_size = os.path.getsize(local_temp_path)
+            file_type, _ = mimetypes.guess_type(local_temp_path)
+            logger.info(f"Archivo descargado: {local_temp_path}, tamaño: {file_size} bytes, tipo: {file_type}")
+            if file_size == 0:
+                logger.error(f"El archivo descargado está vacío: {local_temp_path}")
+                return jsonify({"error": "El archivo descargado está vacío o corrupto. Por favor, intenta de nuevo."}), 400
+
+            # Validación de extensión
+            ext = os.path.splitext(local_temp_path)[1].lower()
+            if ext not in ['.webm', '.m4a', '.mp3', '.wav', '.flac', '.mp4']:
+                logger.error(f"Extensión no permitida: {ext}")
+                return jsonify({"error": f"Formato no soportado. Formatos válidos: .webm, .m4a, .mp3, .wav, .flac, .mp4"}), 400
+
             transcriber = AssemblyAITranscriber()
             upload_url = transcriber.upload_file(local_temp_path)
             raw_result = transcriber.transcribe(upload_url)
