@@ -285,6 +285,20 @@
                 padding: 1rem 0.5rem;
             }
         }
+        .company-input {
+            margin-bottom: 1rem;
+            padding: 0.8rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .company-input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
     </style>
 </head>
 <body>
@@ -329,6 +343,7 @@
                 <div id="camera-waiting">Esperando cámara...</div>
                 <video id="preview" autoplay muted playsinline></video>
                 <div class="recording-controls">
+                    <input type="text" id="companyName" class="company-input" placeholder="Nombre de la empresa para la junta" required>
                     <button id="recordBtn" class="record-btn">
                         <span class="record-indicator"></span>
                         <span class="record-text">Iniciar Grabación</span>
@@ -474,6 +489,7 @@
                     
                     const formData = new FormData();
                     formData.append('file', blob, 'recording.webm');
+                    formData.append('company', document.getElementById('companyName').value);
                     
                     const loadingDiv = document.getElementById('loading');
                     const resultDiv = document.getElementById('result');

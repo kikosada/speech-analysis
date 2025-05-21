@@ -173,6 +173,10 @@ def analyze_audio():
         if 'file' not in request.files:
             return jsonify({"error": "No se ha subido ningún archivo"}), 400
         
+        company_name = request.form.get('company', '').strip()
+        if not company_name:
+            return jsonify({"error": "Por favor, ingresa el nombre de la empresa"}), 400
+        
         file = request.files['file']
         logger.info(f"Archivo recibido: {file.filename}, tipo: {file.content_type}, tamaño: {getattr(file, 'content_length', 'desconocido')}")
         if file.filename == '':
@@ -188,12 +192,13 @@ def analyze_audio():
         filename_unique = f"{unique_id}_{filename}"
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename_unique)
         
-        # Crear carpeta por usuario
+        # Crear carpeta por usuario y empresa
         user_folder = os.path.join('user_uploads', current_user.email)
-        os.makedirs(user_folder, exist_ok=True)
+        company_folder = os.path.join(user_folder, secure_filename(company_name))
+        os.makedirs(company_folder, exist_ok=True)
         
         # Nombre único para el archivo
-        user_file_path = os.path.join(user_folder, filename_unique)
+        user_file_path = os.path.join(company_folder, filename_unique)
         
         # Guardar el archivo en la carpeta de uploads primero
         file.save(filepath)
@@ -205,13 +210,13 @@ def analyze_audio():
             logger.error(f"El archivo {filepath} está vacío.")
             return jsonify({"error": "El archivo grabado está vacío. Por favor, asegúrate de grabar audio y vuelve a intentarlo."}), 400
         
-        # Guardar copia en la carpeta del usuario
+        # Guardar copia en la carpeta del usuario/empresa
         with open(filepath, 'rb') as src, open(user_file_path, 'wb') as dst:
             dst.write(src.read())
         logger.info(f"Copia guardada en: {user_file_path}")
         
-        # Subir a Azure Blob Storage en vez de guardar localmente
-        blob_name = f"{current_user.email}/{filename_unique}"
+        # Subir a Azure Blob Storage con la nueva estructura
+        blob_name = f"{current_user.email}/{secure_filename(company_name)}/{filename_unique}"
         upload_success = upload_file_to_azure(filepath, blob_name)
         if not upload_success:
             return jsonify({"error": "No se pudo subir el archivo a Azure Blob Storage"}), 500
@@ -285,20 +290,25 @@ def api_mis_archivos():
 @login_required
 def mis_archivos():
     user_folder = os.path.join('user_uploads', current_user.email)
-    archivos = []
+    empresas = {}
     if os.path.exists(user_folder):
-        archivos = [f for f in os.listdir(user_folder) if os.path.isfile(os.path.join(user_folder, f))]
-    return render_template('mis_archivos.html', archivos=archivos)
+        for empresa in os.listdir(user_folder):
+            empresa_path = os.path.join(user_folder, empresa)
+            if os.path.isdir(empresa_path):
+                archivos = [f for f in os.listdir(empresa_path) if os.path.isfile(os.path.join(empresa_path, f))]
+                empresas[empresa] = archivos
+    return render_template('mis_archivos.html', empresas=empresas)
 
-@app.route('/descargar/<filename>')
+@app.route('/descargar/<empresa>/<filename>')
 @login_required
-def descargar_archivo(filename):
+def descargar_archivo(empresa, filename):
     user_folder = os.path.join('user_uploads', current_user.email)
+    empresa_path = os.path.join(user_folder, secure_filename(empresa))
     # Seguridad: solo permite descargar archivos de tu carpeta
-    file_path = os.path.join(user_folder, filename)
+    file_path = os.path.join(empresa_path, filename)
     if not os.path.exists(file_path):
         return "Archivo no encontrado", 404
-    return send_from_directory(user_folder, filename, as_attachment=True)
+    return send_from_directory(empresa_path, filename, as_attachment=True)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
