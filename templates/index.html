@@ -320,6 +320,12 @@
             <div style="text-align:right; margin-bottom:1rem;">
                 <a href="{{ url_for('mis_archivos') }}" class="submit-btn mis-archivos-btn" style="background:#6c63ff;">Mis Archivos</a>
             </div>
+            {% if session['empresa'] %}
+            <div style="margin-bottom:1rem; text-align:center;">
+                <b>Empresa actual:</b> {{ session['empresa'] }}
+                <a href="{{ url_for('empresa') }}" style="margin-left:1rem; color:#3498db; text-decoration:underline;">Cambiar empresa</a>
+            </div>
+            {% endif %}
             <h1>Analizador de Presentaciones de Ventas</h1>
             <p class="description">
                 Graba o sube tu presentación de ventas y recibe retroalimentación detallada sobre tu desempeño.<br>
@@ -343,7 +349,6 @@
                 <div id="camera-waiting">Esperando cámara...</div>
                 <video id="preview" autoplay muted playsinline></video>
                 <div class="recording-controls">
-                    <input type="text" id="companyName" class="company-input" placeholder="Nombre de la empresa para la junta" required>
                     <button id="recordBtn" class="record-btn">
                         <span class="record-indicator"></span>
                         <span class="record-text">Iniciar Grabación</span>
@@ -489,7 +494,6 @@
                     
                     const formData = new FormData();
                     formData.append('file', blob, 'recording.webm');
-                    formData.append('company', document.getElementById('companyName').value);
                     
                     const loadingDiv = document.getElementById('loading');
                     const resultDiv = document.getElementById('result');

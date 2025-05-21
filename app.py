@@ -124,6 +124,8 @@ def health_check():
 
 @app.route('/')
 def index():
+    if current_user.is_authenticated and not session.get('empresa'):
+        return redirect(url_for('empresa'))
     return render_template('index.html', is_index=True)
 
 def upload_file_to_azure(file_path, blob_name):
@@ -173,9 +175,9 @@ def analyze_audio():
         if 'file' not in request.files:
             return jsonify({"error": "No se ha subido ningún archivo"}), 400
         
-        company_name = request.form.get('company', '').strip()
+        company_name = session.get('empresa', '').strip()
         if not company_name:
-            return jsonify({"error": "Por favor, ingresa el nombre de la empresa"}), 400
+            return jsonify({"error": "Por favor, selecciona la empresa antes de grabar o subir un archivo."}), 400
         
         file = request.files['file']
         logger.info(f"Archivo recibido: {file.filename}, tipo: {file.content_type}, tamaño: {getattr(file, 'content_length', 'desconocido')}")
@@ -309,6 +311,17 @@ def descargar_archivo(empresa, filename):
     if not os.path.exists(file_path):
         return "Archivo no encontrado", 404
     return send_from_directory(empresa_path, filename, as_attachment=True)
+
+@app.route('/empresa', methods=['GET', 'POST'])
+@login_required
+def empresa():
+    if request.method == 'POST':
+        nombre_empresa = request.form.get('empresa', '').strip()
+        if not nombre_empresa:
+            return render_template('empresa.html', error='Por favor ingresa el nombre de la empresa')
+        session['empresa'] = nombre_empresa
+        return redirect(url_for('index'))
+    return render_template('empresa.html')
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
