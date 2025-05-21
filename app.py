@@ -11,7 +11,8 @@ import time
 import boto3
 from botocore.exceptions import NoCredentialsError
 import tempfile
-from azure.storage.blob import BlobServiceClient
+from azure.storage.blob import BlobServiceClient, generate_blob_sas, BlobSasPermissions
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "supersecret")
@@ -135,30 +136,33 @@ def upload_file_to_azure(file_path, blob_name):
     print(f"Archivo '{file_path}' subido a Azure Blob Storage como '{blob_name}' en el contenedor '{container_name}'")
     return True
 
-def get_s3_presigned_url(s3_key, expiration=3600):
-    s3 = boto3.client('s3')
-    bucket = os.environ.get('S3_BUCKET_NAME', 'archivos-miapp-kiko')
-    try:
-        url = s3.generate_presigned_url(
-            'get_object',
-            Params={'Bucket': bucket, 'Key': s3_key},
-            ExpiresIn=expiration
-        )
-        return url
-    except Exception as e:
-        print(f"Error generando presigned URL: {e}")
-        return None
+def download_file_from_azure(blob_name, local_path):
+    account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
+    account_key = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
+    container_name = os.environ.get('AZURE_CONTAINER_NAME', 'archivos-miapp-kiko')
+    connect_str = f"DefaultEndpointsProtocol=https;AccountName={account_name};AccountKey={account_key};EndpointSuffix=core.windows.net"
+    blob_service_client = BlobServiceClient.from_connection_string(connect_str)
+    blob_client = blob_service_client.get_blob_client(container=container_name, blob=blob_name)
+    with open(local_path, "wb") as f:
+        data = blob_client.download_blob()
+        f.write(data.readall())
+    print(f"Archivo descargado de Azure: {blob_name} -> {local_path}")
+    return True
 
-def download_file_from_s3(s3_key, local_path):
-    s3 = boto3.client('s3')
-    bucket = os.environ.get('S3_BUCKET_NAME', 'archivos-miapp-kiko')
-    try:
-        s3.download_file(bucket, s3_key, local_path)
-        print(f"Archivo descargado de S3: {s3_key} -> {local_path}")
-        return True
-    except Exception as e:
-        print(f"Error descargando archivo de S3: {e}")
-        return False
+def get_azure_blob_sas_url(blob_name, expiration_minutes=60):
+    account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
+    account_key = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
+    container_name = os.environ.get('AZURE_CONTAINER_NAME', 'archivos-miapp-kiko')
+    sas_token = generate_blob_sas(
+        account_name=account_name,
+        container_name=container_name,
+        blob_name=blob_name,
+        account_key=account_key,
+        permission=BlobSasPermissions(read=True),
+        expiry=datetime.utcnow() + timedelta(minutes=expiration_minutes)
+    )
+    url = f"https://{account_name}.blob.core.windows.net/{container_name}/{blob_name}?{sas_token}"
+    return url
 
 @app.route('/analyze', methods=['POST'])
 @login_required
@@ -204,27 +208,27 @@ def analyze_audio():
         logger.info(f"Copia guardada en: {user_file_path}")
         
         # Subir a Azure Blob Storage en vez de guardar localmente
-        s3_key = f"{current_user.email}/{filename}"
-        upload_success = upload_file_to_azure(filepath, s3_key)
+        blob_name = f"{current_user.email}/{filename}"
+        upload_success = upload_file_to_azure(filepath, blob_name)
         if not upload_success:
             return jsonify({"error": "No se pudo subir el archivo a Azure Blob Storage"}), 500
         if os.path.exists(filepath):
             os.remove(filepath)
             logger.info(f"Archivo local eliminado tras subir a Azure: {filename}")
         
-        # PROCESAMIENTO: primero intenta con presigned URL, si falla descarga local
-        presigned_url = get_s3_presigned_url(s3_key)
+        # PROCESAMIENTO: primero intenta con SAS URL, si falla descarga local
+        sas_url = get_azure_blob_sas_url(blob_name)
         try:
             transcriber = AssemblyAITranscriber()
-            upload_url = transcriber.upload_file(presigned_url)
+            upload_url = transcriber.upload_file(sas_url)
             raw_result = transcriber.transcribe(upload_url)
         except Exception as e:
-            print(f"Fallo usando presigned URL, intentando descarga local: {e}")
+            print(f"Fallo usando SAS URL, intentando descarga local: {e}")
             with tempfile.NamedTemporaryFile(delete=False) as tmp:
                 local_temp_path = tmp.name
-            download_success = download_file_from_s3(s3_key, local_temp_path)
+            download_success = download_file_from_azure(blob_name, local_temp_path)
             if not download_success:
-                return jsonify({"error": "No se pudo descargar el archivo de S3"}), 500
+                return jsonify({"error": "No se pudo descargar el archivo de Azure Blob Storage"}), 500
             transcriber = AssemblyAITranscriber()
             upload_url = transcriber.upload_file(local_temp_path)
             raw_result = transcriber.transcribe(upload_url)
