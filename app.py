@@ -14,6 +14,7 @@ import tempfile
 from azure.storage.blob import BlobServiceClient, generate_blob_sas, BlobSasPermissions
 from datetime import datetime, timedelta
 import mimetypes
+import uuid
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "supersecret")
@@ -183,15 +184,16 @@ def analyze_audio():
             }), 400
         
         filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        unique_id = f"{int(time.time())}_{uuid.uuid4().hex[:8]}"
+        filename_unique = f"{unique_id}_{filename}"
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename_unique)
         
         # Crear carpeta por usuario
         user_folder = os.path.join('user_uploads', current_user.email)
         os.makedirs(user_folder, exist_ok=True)
         
         # Nombre único para el archivo
-        unique_filename = f"{int(time.time())}_{filename}"
-        user_file_path = os.path.join(user_folder, unique_filename)
+        user_file_path = os.path.join(user_folder, filename_unique)
         
         # Guardar el archivo en la carpeta de uploads primero
         file.save(filepath)
@@ -209,13 +211,13 @@ def analyze_audio():
         logger.info(f"Copia guardada en: {user_file_path}")
         
         # Subir a Azure Blob Storage en vez de guardar localmente
-        blob_name = f"{current_user.email}/{filename}"
+        blob_name = f"{current_user.email}/{filename_unique}"
         upload_success = upload_file_to_azure(filepath, blob_name)
         if not upload_success:
             return jsonify({"error": "No se pudo subir el archivo a Azure Blob Storage"}), 500
         if os.path.exists(filepath):
             os.remove(filepath)
-            logger.info(f"Archivo local eliminado tras subir a Azure: {filename}")
+            logger.info(f"Archivo local eliminado tras subir a Azure: {filename_unique}")
         
         # Extrae la extensión del blob_name
         ext = os.path.splitext(blob_name)[1]
@@ -254,12 +256,12 @@ def analyze_audio():
             writer = csv.writer(csvfile)
             writer.writerow([
                 current_user.email,
-                filename,
+                filename_unique,
                 user_file_path,
                 request.remote_addr,
                 datetime.now().isoformat()
             ])
-        logger.info(f"Archivo analizado exitosamente: {filename}")
+        logger.info(f"Archivo analizado exitosamente: {filename_unique}")
         return jsonify(formatted_result)
         
     except Exception as e:
