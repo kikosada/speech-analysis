@@ -417,15 +417,12 @@ class AssemblyAITranscriber:
             total_score = sum(scores.values()) / len(scores)
             
             f.write("=== PUNTUACIÓN FINAL ===\n")
-            f.write(f"Duración: {scores['duracion']}/10\n")
             f.write(f"Estructura: {scores['estructura']:.1f}/10\n")
             f.write(f"Ritmo: {scores['ritmo']}/10\n")
             f.write(f"PUNTUACIÓN TOTAL: {total_score:.1f}/10\n\n")
             
             # Recomendaciones basadas en puntuaciones
             f.write("3. RECOMENDACIONES PARA MEJORAR:\n")
-            if scores['duracion'] < 8:
-                f.write("- Ajusta la duración para que esté entre 60-90 segundos\n")
             if scores['estructura'] < 8:
                 f.write("- Mejora la estructura incluyendo introducción clara, beneficios y llamada a la acción\n")
                 f.write("- Asegúrate de mencionar el precio o rango de precios\n")
