@@ -257,7 +257,7 @@ def analyze_audio():
                 filename,
                 user_file_path,
                 request.remote_addr,
-                datetime.datetime.now().isoformat()
+                datetime.now().isoformat()
             ])
         logger.info(f"Archivo analizado exitosamente: {filename}")
         return jsonify(formatted_result)
