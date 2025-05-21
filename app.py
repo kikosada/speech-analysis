@@ -8,6 +8,9 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 import csv
 import datetime
 import time
+import boto3
+from botocore.exceptions import NoCredentialsError
+import tempfile
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "supersecret")
@@ -119,6 +122,45 @@ def health_check():
 def index():
     return render_template('index.html', is_index=True)
 
+def upload_file_to_s3(file_path, s3_key):
+    s3 = boto3.client('s3')
+    bucket = os.environ.get('S3_BUCKET_NAME', 'archivos-miapp-kiko')
+    try:
+        s3.upload_file(file_path, bucket, s3_key)
+        print(f"Archivo '{file_path}' subido a S3 como '{s3_key}' en el bucket '{bucket}'")
+        return True
+    except NoCredentialsError:
+        print("No se encontraron credenciales de AWS.")
+        return False
+    except Exception as e:
+        print(f"Error subiendo archivo a S3: {e}")
+        return False
+
+def get_s3_presigned_url(s3_key, expiration=3600):
+    s3 = boto3.client('s3')
+    bucket = os.environ.get('S3_BUCKET_NAME', 'archivos-miapp-kiko')
+    try:
+        url = s3.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': bucket, 'Key': s3_key},
+            ExpiresIn=expiration
+        )
+        return url
+    except Exception as e:
+        print(f"Error generando presigned URL: {e}")
+        return None
+
+def download_file_from_s3(s3_key, local_path):
+    s3 = boto3.client('s3')
+    bucket = os.environ.get('S3_BUCKET_NAME', 'archivos-miapp-kiko')
+    try:
+        s3.download_file(bucket, s3_key, local_path)
+        print(f"Archivo descargado de S3: {s3_key} -> {local_path}")
+        return True
+    except Exception as e:
+        print(f"Error descargando archivo de S3: {e}")
+        return False
+
 @app.route('/analyze', methods=['POST'])
 @login_required
 def analyze_audio():
@@ -162,37 +204,52 @@ def analyze_audio():
             dst.write(src.read())
         logger.info(f"Copia guardada en: {user_file_path}")
         
+        # Subir a S3 en vez de guardar localmente
+        s3_key = f"{current_user.email}/{filename}"
+        upload_success = upload_file_to_s3(filepath, s3_key)
+        if not upload_success:
+            return jsonify({"error": "No se pudo subir el archivo a S3"}), 500
+
+        # Elimina el archivo local después de subirlo a S3
+        if os.path.exists(filepath):
+            os.remove(filepath)
+            logger.info(f"Archivo local eliminado tras subir a S3: {filename}")
+        
+        # PROCESAMIENTO: primero intenta con presigned URL, si falla descarga local
+        presigned_url = get_s3_presigned_url(s3_key)
         try:
             transcriber = AssemblyAITranscriber()
-            upload_url = transcriber.upload_file(filepath)
+            upload_url = transcriber.upload_file(presigned_url)
             raw_result = transcriber.transcribe(upload_url)
-            formatted_result = format_analysis_result(raw_result)
-            formatted_result['uploaded_by'] = current_user.email
-            
-            # Guardar registro en CSV
-            log_path = os.path.join(os.getcwd(), 'uploads_log.csv')
-            with open(log_path, 'a', newline='', encoding='utf-8') as csvfile:
-                writer = csv.writer(csvfile)
-                writer.writerow([
-                    current_user.email,
-                    filename,
-                    user_file_path,
-                    request.remote_addr,
-                    datetime.datetime.now().isoformat()
-                ])
-            logger.info(f"Archivo analizado exitosamente: {filename}")
-            return jsonify(formatted_result)
-            
         except Exception as e:
-            logger.error(f"Error al procesar el archivo {filename}: {str(e)}")
-            return jsonify({"error": "Error al procesar el archivo de audio. Por favor, inténtalo de nuevo."}), 500
+            print(f"Fallo usando presigned URL, intentando descarga local: {e}")
+            with tempfile.NamedTemporaryFile(delete=False) as tmp:
+                local_temp_path = tmp.name
+            download_success = download_file_from_s3(s3_key, local_temp_path)
+            if not download_success:
+                return jsonify({"error": "No se pudo descargar el archivo de S3"}), 500
+            transcriber = AssemblyAITranscriber()
+            upload_url = transcriber.upload_file(local_temp_path)
+            raw_result = transcriber.transcribe(upload_url)
+            if os.path.exists(local_temp_path):
+                os.remove(local_temp_path)
+        formatted_result = format_analysis_result(raw_result)
+        formatted_result['uploaded_by'] = current_user.email
         
-        finally:
-            # Limpiar el archivo subido
-            if os.path.exists(filepath):
-                os.remove(filepath)
-                logger.info(f"Archivo limpiado: {filename}")
-    
+        # Guardar registro en CSV
+        log_path = os.path.join(os.getcwd(), 'uploads_log.csv')
+        with open(log_path, 'a', newline='', encoding='utf-8') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow([
+                current_user.email,
+                filename,
+                user_file_path,
+                request.remote_addr,
+                datetime.datetime.now().isoformat()
+            ])
+        logger.info(f"Archivo analizado exitosamente: {filename}")
+        return jsonify(formatted_result)
+        
     except Exception as e:
         logger.error(f"Error inesperado: {str(e)}")
         return jsonify({"error": "Ha ocurrido un error inesperado"}), 500
