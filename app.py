@@ -217,39 +217,34 @@ def analyze_audio():
             os.remove(filepath)
             logger.info(f"Archivo local eliminado tras subir a Azure: {filename}")
         
-        # PROCESAMIENTO: primero intenta con SAS URL, si falla descarga local
-        sas_url = get_azure_blob_sas_url(blob_name)
-        try:
-            transcriber = AssemblyAITranscriber()
-            upload_url = transcriber.upload_file(sas_url)
-            raw_result = transcriber.transcribe(upload_url)
-        except Exception as e:
-            print(f"Fallo usando SAS URL, intentando descarga local: {e}")
-            with tempfile.NamedTemporaryFile(delete=False) as tmp:
-                local_temp_path = tmp.name
-            download_success = download_file_from_azure(blob_name, local_temp_path)
-            if not download_success:
-                return jsonify({"error": "No se pudo descargar el archivo de Azure Blob Storage"}), 500
+        # Extrae la extensión del blob_name
+        ext = os.path.splitext(blob_name)[1]
+        with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
+            local_temp_path = tmp.name
 
-            # Log de depuración: tamaño y tipo de archivo
-            file_size = os.path.getsize(local_temp_path)
-            file_type, _ = mimetypes.guess_type(local_temp_path)
-            logger.info(f"Archivo descargado: {local_temp_path}, tamaño: {file_size} bytes, tipo: {file_type}")
-            if file_size == 0:
-                logger.error(f"El archivo descargado está vacío: {local_temp_path}")
-                return jsonify({"error": "El archivo descargado está vacío o corrupto. Por favor, intenta de nuevo."}), 400
+        download_success = download_file_from_azure(blob_name, local_temp_path)
+        if not download_success:
+            return jsonify({"error": "No se pudo descargar el archivo de Azure Blob Storage"}), 500
 
-            # Validación de extensión
-            ext = os.path.splitext(local_temp_path)[1].lower()
-            if ext not in ['.webm', '.m4a', '.mp3', '.wav', '.flac', '.mp4']:
-                logger.error(f"Extensión no permitida: {ext}")
-                return jsonify({"error": f"Formato no soportado. Formatos válidos: .webm, .m4a, .mp3, .wav, .flac, .mp4"}), 400
+        # Log de depuración: tamaño y tipo de archivo
+        file_size = os.path.getsize(local_temp_path)
+        file_type, _ = mimetypes.guess_type(local_temp_path)
+        logger.info(f"Archivo descargado: {local_temp_path}, tamaño: {file_size} bytes, tipo: {file_type}")
+        if file_size == 0:
+            logger.error(f"El archivo descargado está vacío: {local_temp_path}")
+            return jsonify({"error": "El archivo descargado está vacío o corrupto. Por favor, intenta de nuevo."}), 400
 
-            transcriber = AssemblyAITranscriber()
-            upload_url = transcriber.upload_file(local_temp_path)
-            raw_result = transcriber.transcribe(upload_url)
-            if os.path.exists(local_temp_path):
-                os.remove(local_temp_path)
+        # Validación de extensión
+        ext = os.path.splitext(local_temp_path)[1].lower()
+        if ext not in ['.webm', '.m4a', '.mp3', '.wav', '.flac', '.mp4']:
+            logger.error(f"Extensión no permitida: {ext}")
+            return jsonify({"error": f"Formato no soportado. Formatos válidos: .webm, .m4a, .mp3, .wav, .flac, .mp4"}), 400
+
+        transcriber = AssemblyAITranscriber()
+        upload_url = transcriber.upload_file(local_temp_path)
+        raw_result = transcriber.transcribe(upload_url)
+        if os.path.exists(local_temp_path):
+            os.remove(local_temp_path)
         formatted_result = format_analysis_result(raw_result)
         formatted_result['uploaded_by'] = current_user.email
         
