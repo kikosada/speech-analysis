@@ -15,6 +15,7 @@ from azure.storage.blob import BlobServiceClient, generate_blob_sas, BlobSasPerm
 from datetime import datetime, timedelta
 import mimetypes
 import uuid
+import unicodedata
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "supersecret")
@@ -168,6 +169,14 @@ def get_azure_blob_sas_url(blob_name, expiration_minutes=60):
     url = f"https://{account_name}.blob.core.windows.net/{container_name}/{blob_name}?{sas_token}"
     return url
 
+def normaliza_empresa(nombre):
+    nombre = nombre.strip().lower()
+    nombre = ''.join(
+        c for c in unicodedata.normalize('NFD', nombre)
+        if unicodedata.category(c) != 'Mn'
+    )
+    return secure_filename(nombre)
+
 @app.route('/analyze', methods=['POST'])
 @login_required
 def analyze_audio():
@@ -189,16 +198,16 @@ def analyze_audio():
                 "error": f"Tipo de archivo no permitido. Formatos soportados: {', '.join(ALLOWED_EXTENSIONS)}"
             }), 400
         
-        # Normalizar el nombre de la empresa para el nombre del archivo
-        empresa_slug = secure_filename(company_name).replace('-', '').replace('_', '')
+        # Normalizar el nombre de la empresa para el nombre del archivo y rutas
+        empresa_slug = normaliza_empresa(company_name)
         filename = secure_filename(file.filename)
         unique_id = f"{int(time.time())}_{uuid.uuid4().hex[:8]}"
         filename_unique = f"recording_{empresa_slug}_{unique_id}_{filename}"
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename_unique)
         
-        # Crear carpeta por usuario y empresa
+        # Crear carpeta por usuario y empresa (normalizada)
         user_folder = os.path.join('user_uploads', current_user.email)
-        company_folder = os.path.join(user_folder, secure_filename(company_name))
+        company_folder = os.path.join(user_folder, empresa_slug)
         os.makedirs(company_folder, exist_ok=True)
         
         # Nombre único para el archivo
@@ -219,8 +228,8 @@ def analyze_audio():
             dst.write(src.read())
         logger.info(f"Copia guardada en: {user_file_path}")
         
-        # Subir a Azure Blob Storage con la nueva estructura
-        blob_name = f"{current_user.email}/{secure_filename(company_name)}/{filename_unique}"
+        # Subir a Azure Blob Storage con la nueva estructura (empresa normalizada)
+        blob_name = f"{current_user.email}/{empresa_slug}/{filename_unique}"
         upload_success = upload_file_to_azure(filepath, blob_name)
         if not upload_success:
             return jsonify({"error": "No se pudo subir el archivo a Azure Blob Storage"}), 500
@@ -287,10 +296,10 @@ def analyze_audio():
             for item in formatted_result.get('feedback', []):
                 f.write(f"- {item}\n")
 
-        # Subir los txt a Azure Blob Storage en la misma carpeta
-        blob_puntuacion = f"{current_user.email}/{secure_filename(company_name)}/{empresa_slug}_puntuacion.txt"
+        # Subir los txt a Azure Blob Storage en la misma carpeta (empresa normalizada)
+        blob_puntuacion = f"{current_user.email}/{empresa_slug}/{empresa_slug}_puntuacion.txt"
         upload_file_to_azure(puntuacion_path, blob_puntuacion)
-        blob_retro = f"{current_user.email}/{secure_filename(company_name)}/{empresa_slug}_retroalimentacion.txt"
+        blob_retro = f"{current_user.email}/{empresa_slug}/{empresa_slug}_retroalimentacion.txt"
         upload_file_to_azure(retro_path, blob_retro)
 
         return jsonify(formatted_result)
