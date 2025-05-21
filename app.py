@@ -124,7 +124,8 @@ def health_check():
 
 @app.route('/')
 def index():
-    if current_user.is_authenticated and not session.get('empresa'):
+    if current_user.is_authenticated:
+        session.pop('empresa', None)
         return redirect(url_for('empresa'))
     return render_template('index.html', is_index=True)
 
