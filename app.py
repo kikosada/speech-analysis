@@ -11,6 +11,7 @@ import time
 import boto3
 from botocore.exceptions import NoCredentialsError
 import tempfile
+from azure.storage.blob import BlobServiceClient
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "supersecret")
@@ -122,19 +123,17 @@ def health_check():
 def index():
     return render_template('index.html', is_index=True)
 
-def upload_file_to_s3(file_path, s3_key):
-    s3 = boto3.client('s3')
-    bucket = os.environ.get('S3_BUCKET_NAME', 'archivos-miapp-kiko')
-    try:
-        s3.upload_file(file_path, bucket, s3_key)
-        print(f"Archivo '{file_path}' subido a S3 como '{s3_key}' en el bucket '{bucket}'")
-        return True
-    except NoCredentialsError:
-        print("No se encontraron credenciales de AWS.")
-        return False
-    except Exception as e:
-        print(f"Error subiendo archivo a S3: {e}")
-        return False
+def upload_file_to_azure(file_path, blob_name):
+    account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
+    account_key = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
+    container_name = os.environ.get('AZURE_CONTAINER_NAME', 'archivos-miapp-kiko')
+    connect_str = f"DefaultEndpointsProtocol=https;AccountName={account_name};AccountKey={account_key};EndpointSuffix=core.windows.net"
+    blob_service_client = BlobServiceClient.from_connection_string(connect_str)
+    blob_client = blob_service_client.get_blob_client(container=container_name, blob=blob_name)
+    with open(file_path, "rb") as data:
+        blob_client.upload_blob(data, overwrite=True)
+    print(f"Archivo '{file_path}' subido a Azure Blob Storage como '{blob_name}' en el contenedor '{container_name}'")
+    return True
 
 def get_s3_presigned_url(s3_key, expiration=3600):
     s3 = boto3.client('s3')
@@ -204,16 +203,14 @@ def analyze_audio():
             dst.write(src.read())
         logger.info(f"Copia guardada en: {user_file_path}")
         
-        # Subir a S3 en vez de guardar localmente
+        # Subir a Azure Blob Storage en vez de guardar localmente
         s3_key = f"{current_user.email}/{filename}"
-        upload_success = upload_file_to_s3(filepath, s3_key)
+        upload_success = upload_file_to_azure(filepath, s3_key)
         if not upload_success:
-            return jsonify({"error": "No se pudo subir el archivo a S3"}), 500
-
-        # Elimina el archivo local después de subirlo a S3
+            return jsonify({"error": "No se pudo subir el archivo a Azure Blob Storage"}), 500
         if os.path.exists(filepath):
             os.remove(filepath)
-            logger.info(f"Archivo local eliminado tras subir a S3: {filename}")
+            logger.info(f"Archivo local eliminado tras subir a Azure: {filename}")
         
         # PROCESAMIENTO: primero intenta con presigned URL, si falla descarga local
         presigned_url = get_s3_presigned_url(s3_key)
