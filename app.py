@@ -250,7 +250,10 @@ def analyze_audio():
         if os.path.exists(filepath):
             os.remove(filepath)
             logger.info(f"Archivo local eliminado tras subir a Azure: {filename_unique}")
-        
+
+        # Generar la URL SAS del blob de Azure
+        azure_blob_sas_url = get_azure_blob_sas_url(blob_name)
+
         # Extrae la extensión del blob_name
         ext = os.path.splitext(blob_name)[1]
         with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
@@ -282,7 +285,7 @@ def analyze_audio():
             return jsonify({"error": f"Formato no soportado. Formatos válidos: .webm, .m4a, .mp3, .wav, .flac, .mp4"}), 400
 
         transcriber = Transcriber()
-        raw_result = transcriber.transcribe(transcriber_input_path)
+        raw_result = transcriber.transcribe(transcriber_input_path, audio_url=azure_blob_sas_url)
         if os.path.exists(local_temp_path):
             os.remove(local_temp_path)
         if ext in ['.webm', '.mp4'] and os.path.exists(audio_temp_path):
