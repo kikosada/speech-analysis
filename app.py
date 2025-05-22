@@ -12,7 +12,7 @@ import boto3
 from botocore.exceptions import NoCredentialsError
 import tempfile
 from azure.storage.blob import BlobServiceClient, generate_blob_sas, BlobSasPermissions
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import mimetypes
 import uuid
 import unicodedata
@@ -164,7 +164,7 @@ def get_azure_blob_sas_url(blob_name, expiration_minutes=60):
         blob_name=blob_name,
         account_key=account_key,
         permission=BlobSasPermissions(read=True),
-        expiry=datetime.utcnow() + timedelta(minutes=expiration_minutes)
+        expiry=datetime.now(timezone.utc) + timedelta(minutes=expiration_minutes)
     )
     url = f"https://{account_name}.blob.core.windows.net/{container_name}/{blob_name}?{sas_token}"
     return url
