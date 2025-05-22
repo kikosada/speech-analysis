@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from typing import Optional, Dict, Any, List, Tuple
 from datetime import datetime
+from transcriber_base import BaseTranscriber
 
 def analyze_sales_pitch(text: str) -> Tuple[Dict[str, int], List[str]]:
     """
@@ -106,7 +107,7 @@ def analyze_sales_pitch(text: str) -> Tuple[Dict[str, int], List[str]]:
 
     return scores, feedback
 
-class AssemblyAITranscriber:
+class AssemblyAITranscriber(BaseTranscriber):
     def __init__(self, api_key: Optional[str] = None, output_dir: str = "."):
         """
         Inicializa el transcriptor de AssemblyAI.
@@ -186,7 +187,21 @@ class AssemblyAITranscriber:
         except requests.exceptions.RequestException as e:
             raise RuntimeError(f"Error al subir el archivo: {str(e)}")
 
-    def transcribe(self, audio_url: str, **kwargs) -> Dict[str, Any]:
+    def transcribe(self, audio_path: str, **kwargs) -> dict:
+        """
+        Transcribe el audio usando AssemblyAI y analiza el pitch.
+        Args:
+            audio_path: Ruta al archivo de audio
+            **kwargs: Parámetros adicionales para la transcripción
+        Returns:
+            dict: Resultado de la transcripción y análisis
+        """
+        self._validate_audio_file(audio_path)
+        print("Subiendo archivo: {}".format(audio_path))
+        upload_url = self.upload_file(audio_path)
+        return self.transcribe_from_url(upload_url, **kwargs)
+
+    def transcribe_from_url(self, audio_url: str, **kwargs) -> dict:
         """
         Transcribe el audio usando AssemblyAI y analiza el pitch.
         
@@ -491,7 +506,7 @@ def main():
         audio_url = transcriber.upload_file(audio_file)
         
         # Realizar transcripción
-        result = transcriber.transcribe(audio_url)
+        result = transcriber.transcribe(audio_file)
         
         # Guardar resultados
         transcriber.save_transcript(result, audio_file)

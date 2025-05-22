@@ -1,6 +1,11 @@
 from flask import Flask, jsonify, request, render_template, redirect, url_for, session, send_from_directory
 import os
-from transcribe import AssemblyAITranscriber
+PROVIDER = os.environ.get("TRANSCRIBER_PROVIDER", "assemblyai")
+if PROVIDER == "azure":
+    # from transcriber_azure import AzureTranscriber as Transcriber
+    raise NotImplementedError("Azure Speech to Text aún no está implementado.")
+else:
+    from transcribe import AssemblyAITranscriber as Transcriber
 from werkzeug.utils import secure_filename
 import logging
 from authlib.integrations.flask_client import OAuth
@@ -260,9 +265,8 @@ def analyze_audio():
             logger.error(f"Extensión no permitida: {ext}")
             return jsonify({"error": f"Formato no soportado. Formatos válidos: .webm, .m4a, .mp3, .wav, .flac, .mp4"}), 400
 
-        transcriber = AssemblyAITranscriber()
-        upload_url = transcriber.upload_file(local_temp_path)
-        raw_result = transcriber.transcribe(upload_url)
+        transcriber = Transcriber()
+        raw_result = transcriber.transcribe(local_temp_path)
         if os.path.exists(local_temp_path):
             os.remove(local_temp_path)
         formatted_result = format_analysis_result(raw_result)
