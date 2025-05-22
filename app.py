@@ -180,6 +180,7 @@ def normaliza_empresa(nombre):
         c for c in unicodedata.normalize('NFD', nombre)
         if unicodedata.category(c) != 'Mn'
     )
+    nombre = nombre.replace(' ', '')  # Elimina todos los espacios internos
     return secure_filename(nombre)
 
 @app.route('/analyze', methods=['POST'])
