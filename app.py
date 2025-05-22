@@ -20,6 +20,7 @@ from datetime import datetime, timedelta, timezone
 import mimetypes
 import uuid
 import unicodedata
+import subprocess
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "supersecret")
@@ -184,6 +185,12 @@ def normaliza_empresa(nombre):
     nombre = nombre.replace('_', '')  # Elimina guiones bajos que secure_filename podría agregar
     return nombre
 
+def extrae_audio(video_path, audio_path):
+    """Extrae el audio de un video y lo guarda como .wav mono 16kHz."""
+    subprocess.run([
+        "ffmpeg", "-y", "-i", video_path, "-ar", "16000", "-ac", "1", "-f", "wav", audio_path
+    ], check=True)
+
 @app.route('/analyze', methods=['POST'])
 @login_required
 def analyze_audio():
@@ -263,14 +270,23 @@ def analyze_audio():
 
         # Validación de extensión
         ext = os.path.splitext(local_temp_path)[1].lower()
-        if ext not in ['.webm', '.m4a', '.mp3', '.wav', '.flac', '.mp4']:
+        if ext in ['.webm', '.mp4']:
+            # Extraer audio si es video
+            audio_temp_path = local_temp_path + '.wav'
+            extrae_audio(local_temp_path, audio_temp_path)
+            transcriber_input_path = audio_temp_path
+        elif ext in ['.wav', '.mp3', '.m4a', '.flac']:
+            transcriber_input_path = local_temp_path
+        else:
             logger.error(f"Extensión no permitida: {ext}")
             return jsonify({"error": f"Formato no soportado. Formatos válidos: .webm, .m4a, .mp3, .wav, .flac, .mp4"}), 400
 
         transcriber = Transcriber()
-        raw_result = transcriber.transcribe(local_temp_path)
+        raw_result = transcriber.transcribe(transcriber_input_path)
         if os.path.exists(local_temp_path):
             os.remove(local_temp_path)
+        if ext in ['.webm', '.mp4'] and os.path.exists(audio_temp_path):
+            os.remove(audio_temp_path)
         formatted_result = format_analysis_result(raw_result)
         formatted_result['uploaded_by'] = current_user.email
         
