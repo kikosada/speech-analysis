@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, request, render_template, redirect, url_for, session, send_from_directory
 import os
-PROVIDER = os.environ.get("TRANSCRIBER_PROVIDER", "assemblyai")
+PROVIDER = os.environ.get("TRANSCRIBER_PROVIDER", "azure")
 if PROVIDER == "azure":
     from transcriber_azure import AzureTranscriber as Transcriber
 else:
