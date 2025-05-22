@@ -49,9 +49,6 @@ class AzureTranscriber(BaseTranscriber):
             "displayName": "Transcripción de audio",
             "diarizationEnabled": True,
             "properties": {
-                "diarization": {
-                    "speakers": 2  # Cambia este valor si esperas más de 2 hablantes
-                },
                 "wordLevelTimestampsEnabled": True
             }
         }
