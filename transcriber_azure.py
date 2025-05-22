@@ -47,7 +47,6 @@ class AzureTranscriber(BaseTranscriber):
             "contentUrls": [audio_url],
             "locale": self.language,
             "displayName": "Transcripción de audio",
-            "diarizationEnabled": True,
             "properties": {
                 "wordLevelTimestampsEnabled": True
             }
