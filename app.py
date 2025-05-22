@@ -181,7 +181,9 @@ def normaliza_empresa(nombre):
         if unicodedata.category(c) != 'Mn'
     )
     nombre = nombre.replace(' ', '')  # Elimina todos los espacios internos
-    return secure_filename(nombre)
+    nombre = secure_filename(nombre)
+    nombre = nombre.replace('_', '')  # Elimina guiones bajos que secure_filename podría agregar
+    return nombre
 
 @app.route('/analyze', methods=['POST'])
 @login_required
