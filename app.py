@@ -2,8 +2,7 @@ from flask import Flask, jsonify, request, render_template, redirect, url_for, s
 import os
 PROVIDER = os.environ.get("TRANSCRIBER_PROVIDER", "assemblyai")
 if PROVIDER == "azure":
-    # from transcriber_azure import AzureTranscriber as Transcriber
-    raise NotImplementedError("Azure Speech to Text aún no está implementado.")
+    from transcriber_azure import AzureTranscriber as Transcriber
 else:
     from transcribe import AssemblyAITranscriber as Transcriber
 from werkzeug.utils import secure_filename
