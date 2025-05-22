@@ -19,7 +19,7 @@ def analyze_sales_pitch(text: str) -> Tuple[Dict[str, int], List[str]]:
         {
             'key': 'conocimiento_producto',
             'name': 'Conocimiento del producto',
-            'patterns': ['funciona', 'característica', 'beneficio', 'ventaja', 'objeción', 'especificación', 'detalle', 'tecnología', 'proceso', 'cómo', 'por qué'],
+            'patterns': ['funciona', 'característica', 'beneficio', 'ventaja', 'objeción', 'especificación', 'detalle', 'tecnología', 'proceso', 'cómo', 'por qué', 'beneficios', ],
             'feedback': 'Demuestra conocimiento profundo del producto, sus beneficios y posibles objeciones.'
         },
         {
@@ -31,7 +31,7 @@ def analyze_sales_pitch(text: str) -> Tuple[Dict[str, int], List[str]]:
         {
             'key': 'propuesta_valor',
             'name': 'Propuesta de valor clara',
-            'patterns': ['único', 'diferente', 'mejor', 'solución', 'resuelve', 'ventaja competitiva', 'propuesta de valor', 'distinto', 'diferenciador'],
+            'patterns': ['único', 'diferente', 'mejor', 'solución', 'resuelve', 'ventaja competitiva', 'propuesta de valor','propuesta', 'distinto', 'diferenciador'],
             'feedback': 'Explica claramente por qué el producto es mejor o diferente y cómo resuelve un problema.'
         },
         {
@@ -41,9 +41,9 @@ def analyze_sales_pitch(text: str) -> Tuple[Dict[str, int], List[str]]:
             'feedback': 'Genera confianza a través de testimonios, garantías o experiencia.'
         },
         {
-            'key': 'comunicacion',
+            'key': 'comunicación',
             'name': 'Técnicas efectivas de comunicación',
-            'patterns': ['escuchar', 'pregunta', 'cuéntame', 'platícame', '¿', '?', 'adaptar', 'personalizar', 'mensaje', 'interactivo', 'diálogo'],
+            'patterns': ['escuchar', 'pregunta', 'cuéntame', 'platícame', '¿', '?', 'adaptar', 'personalizar', 'mensaje', 'interactivo', 'diálogo','entiendo', 'comprendo', 'duda', 'preocupación', 'objeción', 'respuesta', 'resolver', 'argumento', 'competencia', 'resultado', 'solución'],
             'feedback': 'Utiliza preguntas, escucha activa y adapta el mensaje al cliente.'
         },
         {
@@ -87,16 +87,16 @@ def analyze_sales_pitch(text: str) -> Tuple[Dict[str, int], List[str]]:
         # Escalado simple: 0=0, 1=5, 2=8, 3 o más=10
         if count == 0:
             score = 0
-            fb = f"❌ {rule['name']}: No se detecta evidencia. {rule['feedback']}"
+            fb = f"{rule['name']}: No se detecta evidencia. {rule['feedback']}"
         elif count == 1:
             score = 5
-            fb = f"⚠️ {rule['name']}: Menciona al menos un aspecto, pero puede profundizar más. {rule['feedback']}"
+            fb = f"{rule['name']}: Menciona al menos un aspecto, pero puede profundizar más. {rule['feedback']}"
         elif count == 2:
             score = 8
-            fb = f"✅ {rule['name']}: Bien cubierto, pero puede ser aún más detallado. {rule['feedback']}"
+            fb = f"{rule['name']}: Bien cubierto, pero puede ser aún más detallado. {rule['feedback']}"
         else:
             score = 10
-            fb = f"🌟 {rule['name']}: Excelente, cubre este aspecto de forma completa. {rule['feedback']}"
+            fb = f"{rule['name']}: Excelente, cubre este aspecto de forma completa. {rule['feedback']}"
         scores[rule['key']] = score
         feedback.append(fb)
         total_score += score
