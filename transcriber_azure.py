@@ -2,7 +2,56 @@ import os
 import requests
 from typing import Optional, Dict, Any
 from transcriber_base import BaseTranscriber
-from transcribe import analyze_sales_pitch
+
+# --- Nueva función de análisis de conocimiento de empresa ---
+def analyze_company_knowledge(text: str):
+    text = text.lower()
+    rules = [
+        {
+            'key': 'historia_mision',
+            'name': 'Historia y Misión',
+            'patterns': ['fundación', 'fundador', 'historia', 'misión', 'visión', 'origen', 'inicio', 'creación', 'objetivo', 'propósito'],
+            'feedback': 'Evalúa si la persona conoce la historia, misión y visión de la empresa.'
+        },
+        {
+            'key': 'productos_servicios',
+            'name': 'Productos y Servicios',
+            'patterns': ['producto', 'servicio', 'ofrece', 'ofrecemos', 'portafolio', 'catálogo', 'solución', 'soluciones', 'venta', 'comercializa', 'comercializamos'],
+            'feedback': 'Evalúa si la persona conoce los productos y servicios principales.'
+        },
+        {
+            'key': 'mercado_clientes',
+            'name': 'Mercado y Clientes',
+            'patterns': ['cliente', 'clientes', 'mercado', 'segmento', 'público objetivo', 'target', 'consumidor', 'usuario', 'usuarios'],
+            'feedback': 'Evalúa si la persona conoce el mercado y los clientes de la empresa.'
+        },
+        {
+            'key': 'valores_cultura',
+            'name': 'Valores y Cultura',
+            'patterns': ['valor', 'valores', 'cultura', 'principio', 'ética', 'responsabilidad', 'compromiso', 'integridad', 'innovación', 'excelencia'],
+            'feedback': 'Evalúa si la persona conoce los valores y la cultura organizacional.'
+        },
+        {
+            'key': 'competencia',
+            'name': 'Competencia',
+            'patterns': ['competencia', 'competidor', 'competidores', 'diferenciador', 'único', 'ventaja competitiva', 'comparado con', 'mejor que', 'peor que'],
+            'feedback': 'Evalúa si la persona conoce la competencia y los diferenciadores.'
+        }
+    ]
+    scores = {}
+    feedback = []
+    total = 0
+    for rule in rules:
+        count = sum(text.count(p) for p in rule['patterns'])
+        score = min(10, count * 2) if count > 0 else 0
+        scores[rule['key']] = score
+        total += score
+        if score < 5:
+            feedback.append(f"Poca mención de {rule['name']}. {rule['feedback']}")
+        else:
+            feedback.append(f"Buen conocimiento de {rule['name']}.")
+    scores['overall'] = round(total / len(rules), 1)
+    return scores, feedback
 
 class AzureTranscriber(BaseTranscriber):
     def __init__(self, subscription_key: Optional[str] = None, region: Optional[str] = None):
@@ -87,7 +136,7 @@ class AzureTranscriber(BaseTranscriber):
                     'speaker': phrase['speaker'],
                     'text': phrase['display']
                 })
-        scores, feedback = analyze_sales_pitch(text)
+        scores, feedback = analyze_company_knowledge(text)
         return {
             'text': text,
             'utterances': utterances,
