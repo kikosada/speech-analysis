@@ -11,7 +11,7 @@ services:
       - key: GOOGLE_CLIENT_SECRET
         sync: false
       - key: TRANSCRIBER_PROVIDER
-        value: azure
+        value: assemblyai
       - key: AZURE_SPEECH_KEY
         sync: false
       - key: AZURE_SPEECH_REGION
