@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 # Configurar carpeta de subidas
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'mp3', 'wav', 'm4a', 'flac', 'mp4', 'webm'}
-MAX_CONTENT_LENGTH = 100 * 1024 * 1024  # 100MB tamaño máximo de archivo
+MAX_CONTENT_LENGTH = 512 * 1024 * 1024  # 512MB tamaño máximo de archivo
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
