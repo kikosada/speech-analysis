@@ -326,9 +326,9 @@ def analyze_audio():
                 f.write(f"- {item}\n")
 
         # Subir los txt a Azure Blob Storage en la misma carpeta (empresa normalizada)
-        blob_puntuacion = f"{current_user.email}/{empresa_slug}/{empresa_slug}_puntuacion.txt"
+        blob_puntuacion = f"{current_user.email}/{empresa_slug}/{empresa_slug}_puntuacion_{timestamp}.txt"
         upload_file_to_azure(puntuacion_path, blob_puntuacion)
-        blob_retro = f"{current_user.email}/{empresa_slug}/{empresa_slug}_retroalimentacion.txt"
+        blob_retro = f"{current_user.email}/{empresa_slug}/{empresa_slug}_retroalimentacion_{timestamp}.txt"
         upload_file_to_azure(retro_path, blob_retro)
 
         return jsonify(formatted_result)
