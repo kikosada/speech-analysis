@@ -310,7 +310,8 @@ def analyze_audio():
         logger.info(f"Archivo analizado exitosamente: {filename_unique}")
 
         # Guardar score como txt
-        puntuacion_path = os.path.join(company_folder, f"{empresa_slug}_puntuacion.txt")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        puntuacion_path = os.path.join(company_folder, f"{empresa_slug}_puntuacion_{timestamp}.txt")
         with open(puntuacion_path, 'w', encoding='utf-8') as f:
             f.write("Puntuaciones de la IA para la empresa: " + company_name + "\n\n")
             for key, value in formatted_result.get('scores', {}).items():
@@ -318,7 +319,7 @@ def analyze_audio():
             f.write("\nPuntuación global: {}\n".format(formatted_result.get('scores', {}).get('overall', 'N/A')))
 
         # Guardar retroalimentación como txt
-        retro_path = os.path.join(company_folder, f"{empresa_slug}_retroalimentacion.txt")
+        retro_path = os.path.join(company_folder, f"{empresa_slug}_retroalimentacion_{timestamp}.txt")
         with open(retro_path, 'w', encoding='utf-8') as f:
             f.write("Retroalimentación de la IA para la empresa: " + company_name + "\n\n")
             for item in formatted_result.get('feedback', []):
