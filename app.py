@@ -285,7 +285,10 @@ def analyze_audio():
             return jsonify({"error": f"Formato no soportado. Formatos válidos: .webm, .m4a, .mp3, .wav, .flac, .mp4"}), 400
 
         transcriber = Transcriber()
-        raw_result = transcriber.transcribe(transcriber_input_path, audio_url=azure_blob_sas_url)
+        if PROVIDER == "azure":
+            raw_result = transcriber.transcribe(transcriber_input_path, audio_url=azure_blob_sas_url)
+        else:
+            raw_result = transcriber.transcribe(transcriber_input_path)
         if os.path.exists(local_temp_path):
             os.remove(local_temp_path)
         if ext in ['.webm', '.mp4'] and os.path.exists(audio_temp_path):
