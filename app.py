@@ -1,10 +1,6 @@
 from flask import Flask, jsonify, request, render_template, redirect, url_for, session, send_from_directory
 import os
-PROVIDER = os.environ.get("TRANSCRIBER_PROVIDER", "azure")
-if PROVIDER == "azure":
-    from transcriber_azure import AzureTranscriber as Transcriber
-else:
-    from transcribe import AssemblyAITranscriber as Transcriber
+from transcriber_azure import AzureTranscriber as Transcriber
 from werkzeug.utils import secure_filename
 import logging
 from authlib.integrations.flask_client import OAuth
@@ -21,6 +17,7 @@ import mimetypes
 import uuid
 import unicodedata
 import subprocess
+from celery import Celery
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "supersecret")
@@ -191,79 +188,160 @@ def extrae_audio(video_path, audio_path):
         "ffmpeg", "-y", "-i", video_path, "-ar", "16000", "-ac", "1", "-f", "wav", audio_path
     ], check=True)
 
+# Configuración de Celery para tareas asíncronas
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+celery = Celery(app.name, broker=CELERY_BROKER_URL, backend=CELERY_RESULT_BACKEND)
+
+# Tarea asíncrona para transcribir y analizar el audio
+@celery.task(bind=True)
+def async_transcribe_and_analyze(self, params):
+    """
+    Tarea asíncrona que maneja la transcripción y análisis del audio.
+    Se ejecuta en segundo plano para no bloquear la aplicación.
+    
+    Args:
+        params (dict): Diccionario con todos los parámetros necesarios:
+            - transcriber_input_path: Ruta al archivo de audio
+            - azure_blob_sas_url: URL del blob en Azure (si aplica)
+            - ext: Extensión del archivo
+            - company_folder: Carpeta de la empresa
+            - empresa_slug: Nombre normalizado de la empresa
+            - company_name: Nombre original de la empresa
+            - current_user_email: Email del usuario
+            - blob_puntuacion: Nombre del blob para la puntuación
+            - blob_retro: Nombre del blob para la retroalimentación
+            - puntuacion_path: Ruta local para guardar la puntuación
+            - retro_path: Ruta local para guardar la retroalimentación
+            - PROVIDER: Proveedor de transcripción (azure/assemblyai)
+    """
+    try:
+        # Desempaquetar parámetros
+        transcriber_input_path = params['transcriber_input_path']
+        azure_blob_sas_url = params.get('azure_blob_sas_url')
+        ext = params['ext']
+        company_folder = params['company_folder']
+        empresa_slug = params['empresa_slug']
+        company_name = params['company_name']
+        current_user_email = params['current_user_email']
+        blob_puntuacion = params['blob_puntuacion']
+        blob_retro = params['blob_retro']
+        puntuacion_path = params['puntuacion_path']
+        retro_path = params['retro_path']
+        PROVIDER = params['PROVIDER']
+
+        # Realizar la transcripción usando el proveedor configurado
+        transcriber = Transcriber()
+        if PROVIDER == "azure":
+            raw_result = transcriber.transcribe(transcriber_input_path, audio_url=azure_blob_sas_url)
+        else:
+            raw_result = transcriber.transcribe(transcriber_input_path)
+
+        # Formatear el resultado para el frontend
+        formatted_result = format_analysis_result(raw_result)
+        formatted_result['uploaded_by'] = current_user_email
+
+        # Guardar la puntuación en un archivo de texto
+        with open(puntuacion_path, 'w', encoding='utf-8') as f:
+            f.write("Puntuaciones de la IA para la empresa: " + company_name + "\n\n")
+            for key, value in formatted_result.get('scores', {}).items():
+                f.write(f"{key.capitalize()}: {value}/10\n")
+            f.write("\nPuntuación global: {}\n".format(formatted_result.get('scores', {}).get('overall', 'N/A')))
+
+        # Guardar la retroalimentación en un archivo de texto
+        with open(retro_path, 'w', encoding='utf-8') as f:
+            f.write("Retroalimentación de la IA para la empresa: " + company_name + "\n\n")
+            for item in formatted_result.get('feedback', []):
+                f.write(f"- {item}\n")
+
+        # Subir los archivos de texto a Azure Blob Storage
+        upload_file_to_azure(puntuacion_path, blob_puntuacion)
+        upload_file_to_azure(retro_path, blob_retro)
+
+        return formatted_result
+    except Exception as e:
+        return {'error': str(e)}
+
 @app.route('/analyze', methods=['POST'])
 @login_required
 def analyze_audio():
+    """
+    Endpoint para analizar un archivo de audio.
+    Maneja la subida del archivo, su procesamiento y lanza la tarea asíncrona.
+    """
     try:
+        # Validar que se haya subido un archivo
         if 'file' not in request.files:
             return jsonify({"error": "No se ha subido ningún archivo"}), 400
-        
+
+        # Validar que se haya seleccionado una empresa
         company_name = session.get('empresa', '').strip()
         if not company_name:
             return jsonify({"error": "Por favor, selecciona la empresa antes de grabar o subir un archivo."}), 400
-        
+
+        # Obtener y validar el archivo
         file = request.files['file']
         logger.info(f"Archivo recibido: {file.filename}, tipo: {file.content_type}, tamaño: {getattr(file, 'content_length', 'desconocido')}")
         if file.filename == '':
             return jsonify({"error": "No se ha seleccionado ningún archivo"}), 400
-        
         if not allowed_file(file.filename):
             return jsonify({
                 "error": f"Tipo de archivo no permitido. Formatos soportados: {', '.join(ALLOWED_EXTENSIONS)}"
             }), 400
-        
-        # Normalizar el nombre de la empresa para el nombre del archivo y rutas
+
+        # Preparar nombres de archivo y rutas
         empresa_slug = normaliza_empresa(company_name)
         filename = secure_filename(file.filename)
         unique_id = f"{int(time.time())}_{uuid.uuid4().hex[:8]}"
         filename_unique = f"recording_{empresa_slug}_{unique_id}_{filename}"
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename_unique)
-        
-        # Crear carpeta por usuario y empresa (normalizada)
+
+        # Crear estructura de carpetas
         user_folder = os.path.join('user_uploads', current_user.email)
         company_folder = os.path.join(user_folder, empresa_slug)
         os.makedirs(company_folder, exist_ok=True)
-        
-        # Nombre único para el archivo
         user_file_path = os.path.join(company_folder, filename_unique)
-        
-        # Guardar el archivo en la carpeta de uploads primero
+
+        # Guardar el archivo localmente
         file.save(filepath)
         logger.info(f"Intentando guardar archivo en: {filepath}")
         logger.info(f"¿Existe el archivo después de guardar? {os.path.exists(filepath)}")
-        
-        # Validar si el archivo está vacío
+
+        # Validar que el archivo no esté vacío
         if os.path.getsize(filepath) == 0:
             logger.error(f"El archivo {filepath} está vacío.")
             return jsonify({"error": "El archivo grabado está vacío. Por favor, asegúrate de grabar audio y vuelve a intentarlo."}), 400
-        
-        # Guardar copia en la carpeta del usuario/empresa
+
+        # Guardar copia en la carpeta del usuario
         with open(filepath, 'rb') as src, open(user_file_path, 'wb') as dst:
             dst.write(src.read())
         logger.info(f"Copia guardada en: {user_file_path}")
-        
-        # Subir a Azure Blob Storage con la nueva estructura (empresa normalizada)
+
+        # Subir a Azure Blob Storage
         blob_name = f"{current_user.email}/{empresa_slug}/{filename_unique}"
         upload_success = upload_file_to_azure(filepath, blob_name)
         if not upload_success:
             return jsonify({"error": "No se pudo subir el archivo a Azure Blob Storage"}), 500
+
+        # Limpiar archivo local después de subir
         if os.path.exists(filepath):
             os.remove(filepath)
             logger.info(f"Archivo local eliminado tras subir a Azure: {filename_unique}")
 
-        # Generar la URL SAS del blob de Azure
+        # Generar URL SAS para Azure
         azure_blob_sas_url = get_azure_blob_sas_url(blob_name)
 
-        # Extrae la extensión del blob_name
+        # Preparar archivo temporal para procesamiento
         ext = os.path.splitext(blob_name)[1]
         with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
             local_temp_path = tmp.name
 
+        # Descargar archivo de Azure para procesamiento
         download_success = download_file_from_azure(blob_name, local_temp_path)
         if not download_success:
             return jsonify({"error": "No se pudo descargar el archivo de Azure Blob Storage"}), 500
 
-        # Log de depuración: tamaño y tipo de archivo
+        # Validar archivo descargado
         file_size = os.path.getsize(local_temp_path)
         file_type, _ = mimetypes.guess_type(local_temp_path)
         logger.info(f"Archivo descargado: {local_temp_path}, tamaño: {file_size} bytes, tipo: {file_type}")
@@ -271,7 +349,7 @@ def analyze_audio():
             logger.error(f"El archivo descargado está vacío: {local_temp_path}")
             return jsonify({"error": "El archivo descargado está vacío o corrupto. Por favor, intenta de nuevo."}), 400
 
-        # Validación de extensión
+        # Procesar el archivo según su tipo
         ext = os.path.splitext(local_temp_path)[1].lower()
         if ext in ['.webm', '.mp4']:
             # Extraer audio si es video
@@ -284,58 +362,78 @@ def analyze_audio():
             logger.error(f"Extensión no permitida: {ext}")
             return jsonify({"error": f"Formato no soportado. Formatos válidos: .webm, .m4a, .mp3, .wav, .flac, .mp4"}), 400
 
-        transcriber = Transcriber()
-        if PROVIDER == "azure":
-            raw_result = transcriber.transcribe(transcriber_input_path, audio_url=azure_blob_sas_url)
-        else:
-            raw_result = transcriber.transcribe(transcriber_input_path)
-        if os.path.exists(local_temp_path):
-            os.remove(local_temp_path)
-        if ext in ['.webm', '.mp4'] and os.path.exists(audio_temp_path):
-            os.remove(audio_temp_path)
-        formatted_result = format_analysis_result(raw_result)
-        formatted_result['uploaded_by'] = current_user.email
-        
-        # Guardar registro en CSV
-        log_path = os.path.join(os.getcwd(), 'uploads_log.csv')
-        with open(log_path, 'a', newline='', encoding='utf-8') as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow([
-                current_user.email,
-                filename_unique,
-                user_file_path,
-                request.remote_addr,
-                datetime.now().isoformat()
-            ])
-        logger.info(f"Archivo analizado exitosamente: {filename_unique}")
-
-        # Guardar score como txt
+        # Preparar parámetros para la tarea asíncrona
+        PROVIDER = os.environ.get("TRANSCRIBER_PROVIDER", "azure")
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         puntuacion_path = os.path.join(company_folder, f"{empresa_slug}_puntuacion_{timestamp}.txt")
-        with open(puntuacion_path, 'w', encoding='utf-8') as f:
-            f.write("Puntuaciones de la IA para la empresa: " + company_name + "\n\n")
-            for key, value in formatted_result.get('scores', {}).items():
-                f.write(f"{key.capitalize()}: {value}/10\n")
-            f.write("\nPuntuación global: {}\n".format(formatted_result.get('scores', {}).get('overall', 'N/A')))
-
-        # Guardar retroalimentación como txt
         retro_path = os.path.join(company_folder, f"{empresa_slug}_retroalimentacion_{timestamp}.txt")
-        with open(retro_path, 'w', encoding='utf-8') as f:
-            f.write("Retroalimentación de la IA para la empresa: " + company_name + "\n\n")
-            for item in formatted_result.get('feedback', []):
-                f.write(f"- {item}\n")
-
-        # Subir los txt a Azure Blob Storage en la misma carpeta (empresa normalizada)
         blob_puntuacion = f"{current_user.email}/{empresa_slug}/{empresa_slug}_puntuacion_{timestamp}.txt"
-        upload_file_to_azure(puntuacion_path, blob_puntuacion)
         blob_retro = f"{current_user.email}/{empresa_slug}/{empresa_slug}_retroalimentacion_{timestamp}.txt"
-        upload_file_to_azure(retro_path, blob_retro)
 
-        return jsonify(formatted_result)
-        
+        # Crear diccionario de parámetros para la tarea
+        params = {
+            'transcriber_input_path': transcriber_input_path,
+            'azure_blob_sas_url': azure_blob_sas_url,
+            'ext': ext,
+            'company_folder': company_folder,
+            'empresa_slug': empresa_slug,
+            'company_name': company_name,
+            'current_user_email': current_user.email,
+            'blob_puntuacion': blob_puntuacion,
+            'blob_retro': blob_retro,
+            'puntuacion_path': puntuacion_path,
+            'retro_path': retro_path,
+            'PROVIDER': PROVIDER
+        }
+
+        # Lanzar tarea asíncrona y devolver ID
+        task = async_transcribe_and_analyze.apply_async(args=[params])
+        return jsonify({'task_id': task.id}), 202
+
     except Exception as e:
         logger.error(f"Error inesperado: {str(e)}")
         return jsonify({"error": "Ha ocurrido un error inesperado"}), 500
+
+@app.route('/analyze/status/<task_id>', methods=['GET'])
+def analyze_status(task_id):
+    """
+    Endpoint para consultar el estado de una tarea de análisis.
+    
+    Args:
+        task_id: ID de la tarea a consultar
+    
+    Returns:
+        JSON con el estado actual de la tarea y su resultado si está completa
+    """
+    task = async_transcribe_and_analyze.AsyncResult(task_id)
+    if task.state == 'PENDING':
+        response = {
+            'state': task.state,
+            'status': 'Pendiente, esperando a ser procesada.'
+        }
+    elif task.state == 'STARTED':
+        response = {
+            'state': task.state,
+            'status': 'Procesando...'
+        }
+    elif task.state == 'SUCCESS':
+        response = {
+            'state': task.state,
+            'status': 'Completada',
+            'result': task.result
+        }
+    elif task.state == 'FAILURE':
+        response = {
+            'state': task.state,
+            'status': 'Fallida',
+            'error': str(task.info)
+        }
+    else:
+        response = {
+            'state': task.state,
+            'status': str(task.info)
+        }
+    return jsonify(response)
 
 @app.context_processor
 def inject_user():

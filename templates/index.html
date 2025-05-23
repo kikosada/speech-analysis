@@ -396,13 +396,14 @@
             // Añadir puntuaciones si están disponibles
             if (result.scores) {
                 const ruleLabels = {
-                    'clarity': 'CLARIDAD',
-                    'engagement': 'ENGANCHE',
-                    'persuasion': 'PERSUASIÓN',
-                    'structure': 'ESTRUCTURA',
+                    'historia_mision': 'Historia y Misión',
+                    'productos_servicios': 'Productos y Servicios',
+                    'mercado_clientes': 'Mercado y Clientes',
+                    'valores_cultura': 'Valores y Cultura',
+                    'competencia': 'Competencia',
                     'overall': 'PUNTUACIÓN GLOBAL'
                 };
-                html += `<h3>Puntuaciones por regla de venta</h3><ul>`;
+                html += `<h3>Puntuaciones por conocimiento de la empresa</h3><ul>`;
                 Object.entries(result.scores).forEach(([key, value]) => {
                     if (key !== 'overall') {
                         html += `<li><b>${ruleLabels[key] || key}:</b> <span class="score">${value}/10</span></li>`;
