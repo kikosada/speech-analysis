@@ -74,6 +74,32 @@ def analyze_company_knowledge(text: str) -> Tuple[Dict[str, int], List[str]]:
     scores['overall'] = round(total_score / len(rules))
     return scores, feedback
 
+def extract_responses(text: str) -> str:
+    """
+    Extrae solo las respuestas del texto, ignorando las preguntas.
+    Considera como pregunta cualquier línea que termine en '?'.
+    Devuelve el texto concatenado de todas las respuestas.
+    """
+    lines = text.split('\n')
+    responses = []
+    is_response = False
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.endswith('?') or stripped.endswith('¿'):
+            is_response = True
+            continue
+        if is_response:
+            responses.append(stripped)
+            is_response = False
+    # Si hay respuestas largas, también incluir líneas que no sean preguntas
+    # Alternativamente, si no hay preguntas, usar todo el texto
+    if not responses:
+        # fallback: usar todo el texto
+        return text
+    return ' '.join(responses)
+
 class AssemblyAITranscriber(BaseTranscriber):
     def __init__(self, api_key: Optional[str] = None, output_dir: str = "."):
         """
@@ -200,9 +226,10 @@ class AssemblyAITranscriber(BaseTranscriber):
             
             result = self._wait_for_completion(transcript_id)
             
-            # Analizar el conocimiento sobre la empresa
+            # Analizar el conocimiento sobre la empresa SOLO en las respuestas
             text = result.get('text', '')
-            scores, feedback = analyze_company_knowledge(text)
+            responses_text = extract_responses(text)
+            scores, feedback = analyze_company_knowledge(responses_text)
             
             # Guardar el resultado completo para referencia
             result['scores'] = scores
