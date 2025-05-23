@@ -7,75 +7,45 @@ from typing import Optional, Dict, Any, List, Tuple
 from datetime import datetime
 from transcriber_base import BaseTranscriber
 
-def analyze_sales_pitch(text: str) -> Tuple[Dict[str, int], List[str]]:
+def analyze_company_knowledge(text: str) -> Tuple[Dict[str, int], List[str]]:
     """
-    Analiza el pitch de ventas según 10 reglas clave y genera puntuaciones y retroalimentación detallada.
+    Analiza el conocimiento sobre la empresa en una entrevista.
     Args:
-        text: Texto del pitch de ventas
+        text: Texto de la entrevista
     Returns:
         Tuple[Dict[str, int], List[str]]: Puntuaciones y retroalimentación
     """
     text = text.lower()
     rules = [
         {
-            'key': 'conocimiento_producto',
-            'name': 'Conocimiento del producto',
-            'patterns': ['funciona', 'característica', 'beneficio', 'ventaja', 'objeción', 'especificación', 'detalle', 'tecnología', 'proceso', 'cómo', 'por qué', 'beneficios', ],
-            'feedback': 'Demuestra conocimiento profundo del producto, sus beneficios y posibles objeciones.'
+            'key': 'historia_mision',
+            'name': 'Historia y Misión',
+            'patterns': ['fundación', 'fundador', 'historia', 'misión', 'visión', 'origen', 'inicio', 'creación', 'objetivo', 'propósito'],
+            'feedback': 'Evalúa si la persona conoce la historia, misión y visión de la empresa.'
         },
         {
-            'key': 'conocimiento_cliente',
-            'name': 'Conocimiento del cliente objetivo',
-            'patterns': ['cliente ideal', 'necesidad', 'problema', 'dolor', 'valor', 'busca', 'importa', 'prioridad', 'perfil', 'segmento', 'mercado objetivo'],
-            'feedback': 'Muestra comprensión de quién es el cliente ideal y sus necesidades.'
+            'key': 'productos_servicios',
+            'name': 'Productos y Servicios',
+            'patterns': ['producto', 'servicio', 'ofrecemos', 'vendemos', 'solución', 'portafolio', 'catálogo', 'línea de productos', 'innovación'],
+            'feedback': 'Evalúa si la persona conoce los productos o servicios principales.'
         },
         {
-            'key': 'propuesta_valor',
-            'name': 'Propuesta de valor clara',
-            'patterns': ['único', 'diferente', 'mejor', 'solución', 'resuelve', 'ventaja competitiva', 'propuesta de valor','propuesta', 'distinto', 'diferenciador'],
-            'feedback': 'Explica claramente por qué el producto es mejor o diferente y cómo resuelve un problema.'
+            'key': 'valores_cultura',
+            'name': 'Valores y Cultura',
+            'patterns': ['valor', 'cultura', 'principio', 'ética', 'equipo', 'colaboración', 'diversidad', 'inclusión', 'respeto', 'integridad', 'responsabilidad'],
+            'feedback': 'Evalúa si la persona menciona valores, cultura o filosofía empresarial.'
         },
         {
-            'key': 'credibilidad',
-            'name': 'Credibilidad y confianza',
-            'patterns': ['testimonio', 'garantía', 'experiencia', 'marca', 'confianza', 'caso de éxito', 'sólido', 'certificado', 'avalado', 'recomendado'],
-            'feedback': 'Genera confianza a través de testimonios, garantías o experiencia.'
+            'key': 'mercado_competencia',
+            'name': 'Mercado y Competencia',
+            'patterns': ['mercado', 'competencia', 'competidor', 'sector', 'industria', 'participación', 'tendencia', 'cliente', 'segmento', 'nicho'],
+            'feedback': 'Evalúa si la persona conoce el mercado, clientes o competencia.'
         },
         {
-            'key': 'comunicación',
-            'name': 'Técnicas efectivas de comunicación',
-            'patterns': ['escuchar', 'pregunta', 'cuéntame', 'platícame', '¿', '?', 'adaptar', 'personalizar', 'mensaje', 'interactivo', 'diálogo','entiendo', 'comprendo', 'duda', 'preocupación', 'objeción', 'respuesta', 'resolver', 'argumento', 'competencia', 'resultado', 'solución'],
-            'feedback': 'Utiliza preguntas, escucha activa y adapta el mensaje al cliente.'
-        },
-        {
-            'key': 'demostracion',
-            'name': 'Demostración o prueba del producto',
-            'patterns': ['demostrar', 'mostrar', 'ejemplo', 'prueba', 'caso', 'simulación', 'demo', 'muestra', 'funciona así', 'así se usa'],
-            'feedback': 'Incluye una demostración, ejemplo o prueba del producto.'
-        },
-        {
-            'key': 'urgencia',
-            'name': 'Urgencia o escasez',
-            'patterns': ['oferta limitada', 'solo hoy', 'últimos', 'descuento', 'aprovecha', 'no te lo pierdas', 'por tiempo limitado', 'ahora', 'urgente', 'no disponible después'],
-            'feedback': 'Crea sentido de urgencia o escasez para acelerar la decisión.'
-        },
-        {
-            'key': 'precio',
-            'name': 'Precio y condiciones accesibles',
-            'patterns': ['precio', 'costo', 'valor', 'accesible', 'forma de pago', 'mensualidad', 'financiamiento', 'descuento', 'promoción', 'condiciones', 'flexible'],
-            'feedback': 'Alinea el precio al valor y ofrece condiciones claras y flexibles.'
-        },
-        {
-            'key': 'manejo_objeciones',
-            'name': 'Manejo de objeciones',
-            'patterns': ['entiendo', 'comprendo', 'duda', 'preocupación', 'objeción', 'respuesta', 'resolver', 'argumento', 'competencia', 'resultado', 'solución'],
-            'feedback': 'Responde dudas y objeciones con argumentos sólidos.'
-        },
-        {
-            'key': 'seguimiento',
-            'name': 'Seguimiento postventa',
-            'patterns': ['seguimiento', 'satisfacción', 'recompra', 'recomendación', 'soporte', 'servicio', 'atención', 'resolver problema', 'postventa', 'contacto posterior'],
-            'feedback': 'Asegura satisfacción y fomenta recompra o recomendación.'
+            'key': 'retos_logros',
+            'name': 'Retos y Logros',
+            'patterns': ['reto', 'desafío', 'logro', 'éxito', 'meta', 'dificultad', 'superar', 'alcanzar', 'premio', 'reconocimiento'],
+            'feedback': 'Evalúa si la persona identifica retos o logros recientes de la empresa.'
         },
     ]
 
@@ -85,7 +55,6 @@ def analyze_sales_pitch(text: str) -> Tuple[Dict[str, int], List[str]]:
 
     for rule in rules:
         count = sum(1 for pattern in rule['patterns'] if pattern in text)
-        # Escalado simple: 0=0, 1=5, 2=8, 3 o más=10
         if count == 0:
             score = 0
             fb = f"{rule['name']}: No se detecta evidencia. {rule['feedback']}"
@@ -102,9 +71,7 @@ def analyze_sales_pitch(text: str) -> Tuple[Dict[str, int], List[str]]:
         feedback.append(fb)
         total_score += score
 
-    # Calificación global
     scores['overall'] = round(total_score / len(rules))
-
     return scores, feedback
 
 class AssemblyAITranscriber(BaseTranscriber):
@@ -233,9 +200,9 @@ class AssemblyAITranscriber(BaseTranscriber):
             
             result = self._wait_for_completion(transcript_id)
             
-            # Analizar el pitch
+            # Analizar el conocimiento sobre la empresa
             text = result.get('text', '')
-            scores, feedback = analyze_sales_pitch(text)
+            scores, feedback = analyze_company_knowledge(text)
             
             # Guardar el resultado completo para referencia
             result['scores'] = scores
