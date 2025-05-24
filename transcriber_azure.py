@@ -2,6 +2,7 @@ import os
 import requests
 from typing import Optional, Dict, Any
 from transcriber_base import BaseTranscriber
+import ffmpeg  # Asegúrate de tener ffmpeg-python instalado
 
 # --- Nueva función de análisis de conocimiento de empresa ---
 def analyze_company_knowledge(text: str):
@@ -53,6 +54,14 @@ def analyze_company_knowledge(text: str):
     scores['overall'] = round(total / len(rules), 1)
     return scores, feedback
 
+def get_audio_duration(audio_path):
+    try:
+        probe = ffmpeg.probe(audio_path)
+        duration = float(probe['format']['duration'])
+        return duration
+    except Exception:
+        return None
+
 class AzureTranscriber(BaseTranscriber):
     def __init__(self, subscription_key: Optional[str] = None, region: Optional[str] = None):
         """
@@ -71,7 +80,8 @@ class AzureTranscriber(BaseTranscriber):
                 "o pásalas como parámetros al constructor."
             )
         
-        self.endpoint = f"https://{self.region}.api.cognitive.microsoft.com/speechtotext/v3.1/transcriptions"
+        self.endpoint_batch = f"https://{self.region}.api.cognitive.microsoft.com/speechtotext/v3.1/transcriptions"
+        self.endpoint_short = f"https://{self.region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1"
         self.language = "es-ES"
 
     def transcribe(self, audio_path: str, **kwargs) -> Dict[str, Any]:
@@ -82,65 +92,87 @@ class AzureTranscriber(BaseTranscriber):
         Returns:
             dict: Resultado de la transcripción y análisis
         """
-        # Se espera que el audio ya esté en Azure Blob Storage y se tenga la URL SAS
         audio_url = kwargs.get('audio_url')
-        if not audio_url:
-            raise ValueError("Se requiere la URL SAS del blob de Azure (audio_url) para la transcripción.")
-
-        # Configuración de la transcripción
-        headers = {
-            'Ocp-Apim-Subscription-Key': self.subscription_key,
-            'Content-Type': 'application/json'
-        }
-        payload = {
-            "contentUrls": [audio_url],
-            "locale": self.language,
-            "displayName": "Transcripción de audio",
-            "properties": {
-                "wordLevelTimestampsEnabled": True
+        # Detectar duración del audio
+        duration = get_audio_duration(audio_path)
+        if duration is not None and duration <= 60:
+            # Endpoint rápido para audios <= 60 segundos
+            headers = {
+                "Ocp-Apim-Subscription-Key": self.subscription_key,
+                "Content-Type": "audio/wav; codecs=audio/pcm; samplerate=16000",
+                "Accept": "application/json"
             }
-        }
-        # Crear la transcripción
-        response = requests.post(self.endpoint, headers=headers, json=payload)
-        if response.status_code not in (200, 201):
-            raise RuntimeError(f"Error al crear la transcripción: {response.text}")
-        transcription_url = response.headers.get('Location')
-        if not transcription_url:
-            raise RuntimeError("No se recibió la URL de la transcripción de Azure.")
-
-        # Esperar a que la transcripción esté lista
-        import time
-        for _ in range(60):  # Espera hasta 5 minutos
-            status_resp = requests.get(transcription_url, headers=headers)
-            status_data = status_resp.json()
-            if status_data.get('status') == 'Succeeded':
-                break
-            elif status_data.get('status') == 'Failed':
-                raise RuntimeError(f"Transcripción fallida: {status_data}")
-            time.sleep(5)
+            with open(audio_path, "rb") as audio_file:
+                audio_data = audio_file.read()
+            response = requests.post(
+                self.endpoint_short,
+                headers=headers,
+                params={"language": self.language},
+                data=audio_data
+            )
+            if response.status_code != 200:
+                raise RuntimeError(f"Error en transcripción rápida: {response.text}")
+            data = response.json()
+            text = data.get('DisplayText', '')
+            utterances = []  # El endpoint rápido no da diarización
+            scores, feedback = analyze_company_knowledge(text)
+            return {
+                'text': text,
+                'utterances': utterances,
+                'scores': scores,
+                'feedback': feedback,
+                'audio_duration': duration or 0
+            }
         else:
-            raise RuntimeError("La transcripción tardó demasiado en completarse.")
-
-        # Obtener el resultado de la transcripción
-        results_urls = status_data['resultsUrls']
-        transcript_url = results_urls.get('channel_0') or next(iter(results_urls.values()))
-        transcript_resp = requests.get(transcript_url)
-        transcript_json = transcript_resp.json()
-
-        # Procesar la transcripción y diarización
-        text = " ".join([segment['display'] for segment in transcript_json['recognizedPhrases']])
-        utterances = []
-        for phrase in transcript_json['recognizedPhrases']:
-            if 'speaker' in phrase:
-                utterances.append({
-                    'speaker': phrase['speaker'],
-                    'text': phrase['display']
-                })
-        scores, feedback = analyze_company_knowledge(text)
-        return {
-            'text': text,
-            'utterances': utterances,
-            'scores': scores,
-            'feedback': feedback,
-            'audio_duration': 0  # Azure REST no da duración directa
-        } 
+            # Batch para audios grandes (requiere audio_url en Azure Blob Storage)
+            if not audio_url:
+                raise ValueError("Se requiere la URL SAS del blob de Azure (audio_url) para la transcripción.")
+            headers = {
+                'Ocp-Apim-Subscription-Key': self.subscription_key,
+                'Content-Type': 'application/json'
+            }
+            payload = {
+                "contentUrls": [audio_url],
+                "locale": self.language,
+                "displayName": "Transcripción de audio",
+                "properties": {
+                    "wordLevelTimestampsEnabled": True
+                }
+            }
+            response = requests.post(self.endpoint_batch, headers=headers, json=payload)
+            if response.status_code not in (200, 201):
+                raise RuntimeError(f"Error al crear la transcripción: {response.text}")
+            transcription_url = response.headers.get('Location')
+            if not transcription_url:
+                raise RuntimeError("No se recibió la URL de la transcripción de Azure.")
+            import time
+            for _ in range(60):
+                status_resp = requests.get(transcription_url, headers=headers)
+                status_data = status_resp.json()
+                if status_data.get('status') == 'Succeeded':
+                    break
+                elif status_data.get('status') == 'Failed':
+                    raise RuntimeError(f"Transcripción fallida: {status_data}")
+                time.sleep(5)
+            else:
+                raise RuntimeError("La transcripción tardó demasiado en completarse.")
+            results_urls = status_data['resultsUrls']
+            transcript_url = results_urls.get('channel_0') or next(iter(results_urls.values()))
+            transcript_resp = requests.get(transcript_url)
+            transcript_json = transcript_resp.json()
+            text = " ".join([segment['display'] for segment in transcript_json['recognizedPhrases']])
+            utterances = []
+            for phrase in transcript_json['recognizedPhrases']:
+                if 'speaker' in phrase:
+                    utterances.append({
+                        'speaker': phrase['speaker'],
+                        'text': phrase['display']
+                    })
+            scores, feedback = analyze_company_knowledge(text)
+            return {
+                'text': text,
+                'utterances': utterances,
+                'scores': scores,
+                'feedback': feedback,
+                'audio_duration': duration or 0
+            } 
