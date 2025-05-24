@@ -493,32 +493,7 @@
                         type: 'video/webm'
                     });
                     
-                    const formData = new FormData();
-                    formData.append('file', blob, 'recording.webm');
-                    
-                    const loadingDiv = document.getElementById('loading');
-                    const resultDiv = document.getElementById('result');
-                    
-                    try {
-                        loadingDiv.classList.add('active');
-                        resultDiv.innerHTML = '';
-                        
-                        const response = await fetch('/analyze', {
-                            method: 'POST',
-                            body: formData
-                        });
-                        
-                        const result = await response.json();
-                        if (response.ok) {
-                            resultDiv.innerHTML = formatResult(result);
-                        } else {
-                            resultDiv.innerHTML = `<div class="error">Error: ${result.error}</div>`;
-                        }
-                    } catch (error) {
-                        resultDiv.innerHTML = `<div class="error">Error: Hubo un problema al procesar tu grabación. Por favor, inténtalo de nuevo.</div>`;
-                    } finally {
-                        loadingDiv.classList.remove('active');
-                    }
+                    await handleRecordingUpload(blob);
                 };
 
                 recordBtn.addEventListener('click', toggleRecording);
@@ -561,27 +536,51 @@
             }
         }
 
-        // Existing upload form handler...
+        async function pollTaskStatus(taskId, resultDiv, loadingDiv) {
+            try {
+                let polling = true;
+                while (polling) {
+                    const response = await fetch(`/analyze/status/${taskId}`);
+                    const data = await response.json();
+                    if (data.state === 'SUCCESS') {
+                        resultDiv.innerHTML = formatResult(data.result);
+                        loadingDiv.classList.remove('active');
+                        polling = false;
+                    } else if (data.state === 'FAILURE') {
+                        resultDiv.innerHTML = `<div class="error">Error: ${data.error || 'Hubo un problema al analizar tu grabación.'}</div>`;
+                        loadingDiv.classList.remove('active');
+                        polling = false;
+                    } else {
+                        // Pendiente o procesando
+                        resultDiv.innerHTML = `<div class="loading active"><div class="spinner"></div><p>Analizando tu presentación... Esto puede tomar unos minutos.</p></div>`;
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                    }
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">Error: Hubo un problema al consultar el estado del análisis.</div>`;
+                loadingDiv.classList.remove('active');
+            }
+        }
+
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const form = e.target;
             const resultDiv = document.getElementById('result');
             const submitBtn = form.querySelector('button');
             const loadingDiv = document.getElementById('loading');
-            
             try {
                 submitBtn.disabled = true;
                 loadingDiv.classList.add('active');
                 resultDiv.innerHTML = '';
-                
                 const formData = new FormData(form);
                 const response = await fetch('/analyze', {
                     method: 'POST',
                     body: formData
                 });
-                
                 const result = await response.json();
-                if (response.ok) {
+                if (response.status === 202 && result.task_id) {
+                    await pollTaskStatus(result.task_id, resultDiv, loadingDiv);
+                } else if (response.ok) {
                     resultDiv.innerHTML = formatResult(result);
                 } else {
                     resultDiv.innerHTML = `<div class="error">Error: ${result.error}</div>`;
@@ -593,6 +592,33 @@
                 loadingDiv.classList.remove('active');
             }
         });
+
+        async function handleRecordingUpload(blob) {
+            const formData = new FormData();
+            formData.append('file', blob, 'recording.webm');
+            const loadingDiv = document.getElementById('loading');
+            const resultDiv = document.getElementById('result');
+            try {
+                loadingDiv.classList.add('active');
+                resultDiv.innerHTML = '';
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                if (response.status === 202 && result.task_id) {
+                    await pollTaskStatus(result.task_id, resultDiv, loadingDiv);
+                } else if (response.ok) {
+                    resultDiv.innerHTML = formatResult(result);
+                } else {
+                    resultDiv.innerHTML = `<div class="error">Error: ${result.error}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">Error: Hubo un problema al procesar tu grabación. Por favor, inténtalo de nuevo.</div>`;
+            } finally {
+                loadingDiv.classList.remove('active');
+            }
+        }
 
         document.getElementById('cameraSelect').addEventListener('change', () => {
             if (preview.srcObject) {
