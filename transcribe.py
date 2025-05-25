@@ -223,7 +223,8 @@ class AssemblyAITranscriber(BaseTranscriber):
                 'text': text,
                 'scores': scores,
                 'feedback': feedback,
-                'audio_duration': result.get('audio_duration', 0)
+                'audio_duration': result.get('audio_duration', 0),
+                'utterances': result.get('utterances', [])
             }
             
         except requests.exceptions.RequestException as e:
