@@ -196,7 +196,8 @@ class AssemblyAITranscriber(BaseTranscriber):
         default_config = {
             "audio_url": audio_url,
             "language_code": "es",
-            "speaker_labels": True
+            "speaker_labels": True,
+            "speaker_count": 2
         }
         
         # Combinar con kwargs para permitir personalización
