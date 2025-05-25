@@ -292,7 +292,10 @@ def analyze_audio():
         retro_path = os.path.join(company_folder, f"{empresa_slug}_retroalimentacion.txt")
         with open(retro_path, 'w', encoding='utf-8') as f:
             f.write("Retroalimentación de la IA para la empresa: " + company_name + "\n\n")
-            for item in formatted_result.get('feedback', []):
+            feedback = formatted_result.get('feedback', [])
+            if feedback is None:
+                feedback = []
+            for item in feedback:
                 f.write(f"- {item}\n")
 
         # Subir los txt a Azure Blob Storage en la misma carpeta (empresa normalizada)
