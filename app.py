@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 # Configurar carpeta de subidas
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'mp3', 'wav', 'm4a', 'flac', 'mp4', 'webm'}
-MAX_CONTENT_LENGTH = 100 * 1024 * 1024  # 100MB tamaño máximo de archivo
+MAX_CONTENT_LENGTH = 500 * 1024 * 1024  # 500MB tamaño máximo de archivo
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
@@ -362,4 +362,7 @@ def empresa():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
+    # Configuración para permitir archivos grandes y tiempos de espera más largos
+    app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB
+    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 300  # 5 minutos
     app.run(host='0.0.0.0', port=port) 
