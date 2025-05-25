@@ -7,76 +7,52 @@ from typing import Optional, Dict, Any, List, Tuple
 from datetime import datetime
 from transcriber_base import BaseTranscriber
 
-def analyze_sales_pitch(text: str) -> Tuple[Dict[str, int], List[str]]:
+def analyze_company_knowledge(text: str) -> Tuple[Dict[str, int], List[str]]:
     """
-    Analiza el pitch de ventas según 10 reglas clave y genera puntuaciones y retroalimentación detallada.
+    Analiza el conocimiento sobre la empresa según 6 criterios clave y genera puntuaciones y retroalimentación detallada.
     Args:
-        text: Texto del pitch de ventas
+        text: Texto de la entrevista
     Returns:
         Tuple[Dict[str, int], List[str]]: Puntuaciones y retroalimentación
     """
     text = text.lower()
     rules = [
         {
-            'key': 'conocimiento_producto',
-            'name': 'Conocimiento del producto',
-            'patterns': ['funciona', 'característica', 'beneficio', 'ventaja', 'objeción', 'especificación', 'detalle', 'tecnología', 'proceso', 'cómo', 'por qué', 'beneficios', ],
-            'feedback': 'Demuestra conocimiento profundo del producto, sus beneficios y posibles objeciones.'
+            'key': 'historia',
+            'name': 'Historia y Orígenes',
+            'patterns': ['fundó', 'creó', 'inició', 'comenzó', 'empezó', 'historia', 'origen', 'fundación', 'creación', 'inicio', 'comienzo', 'año', 'desde', 'desarrollo', 'evolución', 'crecimiento'],
+            'feedback': 'Demuestra conocimiento de la historia y orígenes de la empresa.'
         },
         {
-            'key': 'conocimiento_cliente',
-            'name': 'Conocimiento del cliente objetivo',
-            'patterns': ['cliente ideal', 'necesidad', 'problema', 'dolor', 'valor', 'busca', 'importa', 'prioridad', 'perfil', 'segmento', 'mercado objetivo'],
-            'feedback': 'Muestra comprensión de quién es el cliente ideal y sus necesidades.'
+            'key': 'mision_vision',
+            'name': 'Misión y Visión',
+            'patterns': ['misión', 'visión', 'propósito', 'objetivo', 'meta', 'aspiración', 'busca', 'quiere', 'desea', 'pretende', 'propone', 'compromiso', 'valores', 'principios', 'filosofía'],
+            'feedback': 'Muestra comprensión de la misión, visión y propósito de la empresa.'
         },
         {
-            'key': 'propuesta_valor',
-            'name': 'Propuesta de valor clara',
-            'patterns': ['único', 'diferente', 'mejor', 'solución', 'resuelve', 'ventaja competitiva', 'propuesta de valor','propuesta', 'distinto', 'diferenciador'],
-            'feedback': 'Explica claramente por qué el producto es mejor o diferente y cómo resuelve un problema.'
+            'key': 'productos',
+            'name': 'Productos y Servicios',
+            'patterns': ['producto', 'servicio', 'solución', 'ofrece', 'proporciona', 'brinda', 'entrega', 'desarrolla', 'crea', 'produce', 'fabrica', 'característica', 'beneficio', 'ventaja', 'diferencial'],
+            'feedback': 'Conoce en detalle los productos y servicios que ofrece la empresa.'
         },
         {
-            'key': 'credibilidad',
-            'name': 'Credibilidad y confianza',
-            'patterns': ['testimonio', 'garantía', 'experiencia', 'marca', 'confianza', 'caso de éxito', 'sólido', 'certificado', 'avalado', 'recomendado'],
-            'feedback': 'Genera confianza a través de testimonios, garantías o experiencia.'
+            'key': 'valores',
+            'name': 'Valores y Cultura',
+            'patterns': ['valor', 'cultura', 'ética', 'principio', 'creencia', 'filosofía', 'trabajo en equipo', 'colaboración', 'innovación', 'excelencia', 'calidad', 'integridad', 'respeto', 'compromiso'],
+            'feedback': 'Entiende los valores y la cultura organizacional de la empresa.'
         },
         {
-            'key': 'comunicación',
-            'name': 'Técnicas efectivas de comunicación',
-            'patterns': ['escuchar', 'pregunta', 'cuéntame', 'platícame', '¿', '?', 'adaptar', 'personalizar', 'mensaje', 'interactivo', 'diálogo','entiendo', 'comprendo', 'duda', 'preocupación', 'objeción', 'respuesta', 'resolver', 'argumento', 'competencia', 'resultado', 'solución'],
-            'feedback': 'Utiliza preguntas, escucha activa y adapta el mensaje al cliente.'
+            'key': 'mercado',
+            'name': 'Mercado y Competencia',
+            'patterns': ['mercado', 'industria', 'sector', 'competencia', 'competidor', 'cliente', 'usuario', 'demanda', 'oferta', 'tendencia', 'oportunidad', 'desafío', 'reto', 'posicionamiento', 'cuota de mercado'],
+            'feedback': 'Demuestra conocimiento del mercado, competencia y posicionamiento.'
         },
         {
-            'key': 'demostracion',
-            'name': 'Demostración o prueba del producto',
-            'patterns': ['demostrar', 'mostrar', 'ejemplo', 'prueba', 'caso', 'simulación', 'demo', 'muestra', 'funciona así', 'así se usa'],
-            'feedback': 'Incluye una demostración, ejemplo o prueba del producto.'
-        },
-        {
-            'key': 'urgencia',
-            'name': 'Urgencia o escasez',
-            'patterns': ['oferta limitada', 'solo hoy', 'últimos', 'descuento', 'aprovecha', 'no te lo pierdas', 'por tiempo limitado', 'ahora', 'urgente', 'no disponible después'],
-            'feedback': 'Crea sentido de urgencia o escasez para acelerar la decisión.'
-        },
-        {
-            'key': 'precio',
-            'name': 'Precio y condiciones accesibles',
-            'patterns': ['precio', 'costo', 'valor', 'accesible', 'forma de pago', 'mensualidad', 'financiamiento', 'descuento', 'promoción', 'condiciones', 'flexible'],
-            'feedback': 'Alinea el precio al valor y ofrece condiciones claras y flexibles.'
-        },
-        {
-            'key': 'manejo_objeciones',
-            'name': 'Manejo de objeciones',
-            'patterns': ['entiendo', 'comprendo', 'duda', 'preocupación', 'objeción', 'respuesta', 'resolver', 'argumento', 'competencia', 'resultado', 'solución'],
-            'feedback': 'Responde dudas y objeciones con argumentos sólidos.'
-        },
-        {
-            'key': 'seguimiento',
-            'name': 'Seguimiento postventa',
-            'patterns': ['seguimiento', 'satisfacción', 'recompra', 'recomendación', 'soporte', 'servicio', 'atención', 'resolver problema', 'postventa', 'contacto posterior'],
-            'feedback': 'Asegura satisfacción y fomenta recompra o recomendación.'
-        },
+            'key': 'logros',
+            'name': 'Logros y Reconocimientos',
+            'patterns': ['logro', 'éxito', 'reconocimiento', 'premio', 'certificación', 'hito', 'meta alcanzada', 'objetivo cumplido', 'crecimiento', 'expansión', 'innovación', 'desarrollo', 'avance', 'progreso'],
+            'feedback': 'Conoce los logros, reconocimientos y éxitos de la empresa.'
+        }
     ]
 
     scores = {}
@@ -189,7 +165,7 @@ class AssemblyAITranscriber(BaseTranscriber):
 
     def transcribe(self, audio_path: str, **kwargs) -> dict:
         """
-        Transcribe el audio usando AssemblyAI y analiza el pitch.
+        Transcribe el audio usando AssemblyAI y analiza el conocimiento sobre la empresa.
         Args:
             audio_path: Ruta al archivo de audio
             **kwargs: Parámetros adicionales para la transcripción
@@ -203,7 +179,7 @@ class AssemblyAITranscriber(BaseTranscriber):
 
     def transcribe_from_url(self, audio_url: str, **kwargs) -> dict:
         """
-        Transcribe el audio usando AssemblyAI y analiza el pitch.
+        Transcribe el audio usando AssemblyAI y analiza el conocimiento sobre la empresa.
         
         Args:
             audio_url: URL del archivo de audio
@@ -233,9 +209,9 @@ class AssemblyAITranscriber(BaseTranscriber):
             
             result = self._wait_for_completion(transcript_id)
             
-            # Analizar el pitch
+            # Analizar el conocimiento sobre la empresa
             text = result.get('text', '')
-            scores, feedback = analyze_sales_pitch(text)
+            scores, feedback = analyze_company_knowledge(text)
             
             # Guardar el resultado completo para referencia
             result['scores'] = scores
@@ -342,14 +318,14 @@ class AssemblyAITranscriber(BaseTranscriber):
         with open(txt_path, 'w', encoding='utf-8') as f:
             f.write(result["text"])
         
-        # Guardar retroalimentación del pitch
+        # Guardar retroalimentación del conocimiento sobre la empresa
         feedback_path = self.output_dir / f"{base_name}_{timestamp}_feedback.txt"
         with open(feedback_path, 'w', encoding='utf-8') as f:
-            f.write("=== RETROALIMENTACIÓN DEL PITCH ===\n\n")
+            f.write("=== RETROALIMENTACIÓN DEL CONOCIMIENTO SOBRE LA EMPRESA ===\n\n")
             
             if "utterances" in result and len(speakers_text) > 1:
                 f.write(f"Número de participantes detectados: {len(speakers_text)}\n")
-                f.write(f"Analizando el pitch del Hablante {seller_speaker} (identificado como el vendedor)\n\n")
+                f.write(f"Analizando el conocimiento sobre la empresa del Hablante {seller_speaker} (identificado como el vendedor)\n\n")
             
             # Inicializar puntuaciones
             scores = {}
@@ -367,7 +343,7 @@ class AssemblyAITranscriber(BaseTranscriber):
             else:
                 f.write("⚠ La duración está muy fuera del rango óptimo (60-90 segundos)\n")
                 scores['duracion'] = 4
-            f.write(f"   Duración del pitch: {seller_duration:.1f} segundos\n")
+            f.write(f"   Duración del conocimiento sobre la empresa: {seller_duration:.1f} segundos\n")
             f.write(f"   Puntuación: {scores['duracion']}/10\n\n")
             
             # Análisis de estructura usando solo el texto del vendedor
@@ -376,13 +352,13 @@ class AssemblyAITranscriber(BaseTranscriber):
             structure_score = 0
             total_checks = 0
             
-            # Introducción del producto
+            # Introducción del conocimiento sobre la empresa
             total_checks += 1
             if any(word in text for word in ['te presento', 'les presento', 'presentamos']):
-                f.write("✓ Buena introducción del producto\n")
+                f.write("✓ Buena introducción del conocimiento sobre la empresa\n")
                 structure_score += 1
             else:
-                f.write("⚠ Falta una clara introducción del producto\n")
+                f.write("⚠ Falta una clara introducción del conocimiento sobre la empresa\n")
             
             # Beneficios y características
             total_checks += 1

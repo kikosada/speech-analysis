@@ -102,10 +102,12 @@ def format_analysis_result(raw_result):
         return {
             'text': raw_result.get('text', ''),
             'scores': {
-                'clarity': raw_result.get('scores', {}).get('clarity', 0),
-                'engagement': raw_result.get('scores', {}).get('engagement', 0),
-                'persuasion': raw_result.get('scores', {}).get('persuasion', 0),
-                'structure': raw_result.get('scores', {}).get('structure', 0),
+                'historia': raw_result.get('scores', {}).get('historia', 0),
+                'mision_vision': raw_result.get('scores', {}).get('mision_vision', 0),
+                'productos': raw_result.get('scores', {}).get('productos', 0),
+                'valores': raw_result.get('scores', {}).get('valores', 0),
+                'mercado': raw_result.get('scores', {}).get('mercado', 0),
+                'logros': raw_result.get('scores', {}).get('logros', 0),
                 'overall': raw_result.get('scores', {}).get('overall', 0)
             },
             'feedback': raw_result.get('feedback', []),
