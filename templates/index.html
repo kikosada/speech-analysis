@@ -457,8 +457,12 @@
                 const cameraSelect = document.getElementById('cameraSelect');
                 const facingMode = cameraSelect ? cameraSelect.value : "environment";
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    audio: true,
-                    video: { facingMode: { ideal: facingMode } }
+                    video: {
+                        width: 640,  // Reducido de 1280
+                        height: 480, // Reducido de 720
+                        frameRate: 24 // Reducido de 30
+                    },
+                    audio: true
                 });
                 preview.srcObject = stream;
                 if (!isMobile()) {
@@ -480,7 +484,8 @@
                 document.getElementById('camera-waiting').style.display = 'none';
                 
                 mediaRecorder = new MediaRecorder(stream, {
-                    mimeType: 'video/webm'
+                    mimeType: 'video/webm;codecs=vp8,opus',
+                    videoBitsPerSecond: 1000000 // 1 Mbps (reducido de ~2.5 Mbps)
                 });
 
                 mediaRecorder.ondataavailable = (event) => {
