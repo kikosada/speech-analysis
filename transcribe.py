@@ -83,6 +83,34 @@ def analyze_company_knowledge(text: str) -> Tuple[Dict[str, int], List[str]]:
 
     return scores, feedback
 
+def split_questions_answers(text: str):
+    """
+    Separa el texto en bloques de pregunta y respuesta.
+    Devuelve una lista de dicts: {'tipo': 'pregunta'/'respuesta', 'texto': ...}
+    """
+    import re
+    bloques = []
+    oraciones = re.split(r'(?<=[?.!])\s+', text.strip())
+    actual = None
+    for oracion in oraciones:
+        if oracion.strip() == '':
+            continue
+        if oracion.strip().endswith('?') or re.match(r'^(¿|\b(qu[eéuioá]|por|cómo|cuándo|dónde|quién|cuál|cuánto)\b)', oracion.strip(), re.IGNORECASE):
+            actual = {'tipo': 'pregunta', 'texto': oracion.strip()}
+            bloques.append(actual)
+        else:
+            if bloques and bloques[-1]['tipo'] == 'pregunta':
+                bloques.append({'tipo': 'respuesta', 'texto': oracion.strip()})
+            elif not bloques:
+                bloques.append({'tipo': 'respuesta', 'texto': oracion.strip()})
+            else:
+                # Concatenar a la última respuesta
+                if bloques[-1]['tipo'] == 'respuesta':
+                    bloques[-1]['texto'] += ' ' + oracion.strip()
+                else:
+                    bloques.append({'tipo': 'respuesta', 'texto': oracion.strip()})
+    return bloques
+
 class AssemblyAITranscriber(BaseTranscriber):
     def __init__(self, api_key: Optional[str] = None, output_dir: str = "."):
         """
@@ -219,13 +247,17 @@ class AssemblyAITranscriber(BaseTranscriber):
             result['feedback'] = feedback
             self.save_transcript(result, "transcript.txt")
             
+            # Separar preguntas y respuestas
+            qa_blocks = split_questions_answers(text)
+            
             # Devolver solo lo necesario para el frontend
             return {
                 'text': text,
                 'scores': scores,
                 'feedback': feedback,
                 'audio_duration': result.get('audio_duration', 0),
-                'utterances': result.get('utterances', [])
+                'utterances': result.get('utterances', []),
+                'qa_blocks': qa_blocks
             }
             
         except requests.exceptions.RequestException as e:
