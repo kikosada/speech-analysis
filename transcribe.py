@@ -83,21 +83,36 @@ def analyze_company_knowledge(text: str) -> Tuple[Dict[str, int], List[str]]:
 
     return scores, feedback
 
-def split_questions_answers(text: str):
+def split_questions_answers(text: str, utterances=None):
     """
-    Separa el texto en bloques de pregunta y respuesta.
+    Separa el texto en bloques de pregunta y respuesta usando:
+    1. Utterances (si existen) para separar por turnos de hablante
+    2. Palabras interrogativas al inicio de la oración
+    3. Signos de pregunta
     Devuelve una lista de dicts: {'tipo': 'pregunta'/'respuesta', 'texto': ...}
     """
     import re
     bloques = []
+    interrogativas = r'^(¿|qu[eéuioá]|por|cómo|cuándo|dónde|quién|cuál|cuánto)\b'
+    # 1. Si hay utterances, usar turnos de hablante
+    if utterances and isinstance(utterances, list) and len(utterances) > 0:
+        for utt in utterances:
+            oracion = utt.get('text', '').strip()
+            if not oracion:
+                continue
+            # Detectar pregunta por '?' o palabra interrogativa
+            if oracion.endswith('?') or re.match(interrogativas, oracion, re.IGNORECASE):
+                bloques.append({'tipo': 'pregunta', 'texto': oracion})
+            else:
+                bloques.append({'tipo': 'respuesta', 'texto': oracion})
+        return bloques
+    # 2. Si no hay utterances, usar el texto plano
     oraciones = re.split(r'(?<=[?.!])\s+', text.strip())
-    actual = None
     for oracion in oraciones:
         if oracion.strip() == '':
             continue
-        if oracion.strip().endswith('?') or re.match(r'^(¿|\b(qu[eéuioá]|por|cómo|cuándo|dónde|quién|cuál|cuánto)\b)', oracion.strip(), re.IGNORECASE):
-            actual = {'tipo': 'pregunta', 'texto': oracion.strip()}
-            bloques.append(actual)
+        if oracion.strip().endswith('?') or re.match(interrogativas, oracion.strip(), re.IGNORECASE):
+            bloques.append({'tipo': 'pregunta', 'texto': oracion.strip()})
         else:
             if bloques and bloques[-1]['tipo'] == 'pregunta':
                 bloques.append({'tipo': 'respuesta', 'texto': oracion.strip()})
@@ -247,8 +262,8 @@ class AssemblyAITranscriber(BaseTranscriber):
             result['feedback'] = feedback
             self.save_transcript(result, "transcript.txt")
             
-            # Separar preguntas y respuestas
-            qa_blocks = split_questions_answers(text)
+            # Separar preguntas y respuestas usando utterances si existen
+            qa_blocks = split_questions_answers(text, result.get('utterances', []))
             
             # Devolver solo lo necesario para el frontend
             return {
