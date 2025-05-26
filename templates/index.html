@@ -381,8 +381,17 @@
         function formatResult(result) {
             if (!result) return '';
             let html = '<div class="result-section">';
-            // Mostrar transcripción por hablante si existe
-            if (result.utterances && Array.isArray(result.utterances) && result.utterances.length > 0) {
+            // Mostrar bloques de pregunta y respuesta si existen
+            if (result.qa_blocks && Array.isArray(result.qa_blocks) && result.qa_blocks.length > 0) {
+                html += `<h3>Pregunta y Respuesta</h3>`;
+                result.qa_blocks.forEach(block => {
+                    if (block.tipo === 'pregunta') {
+                        html += `<div style="background:#e3f2fd;padding:0.7em 1em;margin:0.5em 0;border-radius:6px;border-left:4px solid #1976d2;"><b>Pregunta:</b> ${block.texto}</div>`;
+                    } else {
+                        html += `<div style="background:#fff3e0;padding:0.7em 1em;margin:0.5em 0;border-radius:6px;border-left:4px solid #f57c00;"><b>Respuesta:</b> ${block.texto}</div>`;
+                    }
+                });
+            } else if (result.utterances && Array.isArray(result.utterances) && result.utterances.length > 0) {
                 html += `<h3>Transcripción por Hablante</h3>`;
                 result.utterances.forEach(u => {
                     html += `<p><b>HABLANTE ${u.speaker}:</b> ${u.text}</p>`;
