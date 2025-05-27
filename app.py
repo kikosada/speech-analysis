@@ -108,7 +108,7 @@ def auth_callback():
     if tipo == 'cliente':
         return redirect(url_for('cliente'))
     else:
-        return redirect(url_for('asesor'))
+        return redirect(url_for('empresa'))
 
 @app.route('/logout')
 @login_required
