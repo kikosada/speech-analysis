@@ -354,8 +354,220 @@
         <div id="result"></div>
     </div>
     <script>
-        // El mismo JS de la página principal para grabar, subir y mostrar resultados
-        // ... (puedes copiar el JS de la versión anterior aquí) ...
+        // --- JS para tabs (Grabar/Subir) ---
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.upload-section, .record-section').forEach(s => s.classList.remove('active'));
+                tab.classList.add('active');
+                document.querySelector(`.${tab.dataset.tab}-section`).classList.add('active');
+            });
+        });
+
+        // --- Grabación de video/audio ---
+        let mediaRecorder;
+        let recordedChunks = [];
+        let startTime;
+        let timerInterval;
+        const recordBtn = document.getElementById('recordBtn');
+        const timer = document.getElementById('timer');
+        const preview = document.getElementById('preview');
+
+        async function setupRecording() {
+            try {
+                const cameraSelect = document.getElementById('cameraSelect');
+                const facingMode = cameraSelect ? cameraSelect.value : "environment";
+                const constraints = {
+                    audio: true,
+                    video: {
+                        facingMode: facingMode,
+                        width: 640,
+                        height: 480
+                    }
+                };
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                preview.srcObject = stream;
+                preview.classList.add(facingMode === 'user' ? 'mirror' : 'no-mirror');
+                document.getElementById('camera-waiting').style.display = 'none';
+
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'video/webm;codecs=vp8,opus',
+                    videoBitsPerSecond: 800000,
+                    audioBitsPerSecond: 192000
+                });
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.onstop = async () => {
+                    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                    const formData = new FormData();
+                    formData.append('file', blob, 'recording.webm');
+                    const loadingDiv = document.getElementById('loading');
+                    const resultDiv = document.getElementById('result');
+                    try {
+                        loadingDiv.classList.add('active');
+                        resultDiv.innerHTML = '';
+                        const response = await fetch('/analyze', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        const result = await response.json();
+                        if (response.ok) {
+                            resultDiv.innerHTML = formatResult(result);
+                        } else {
+                            resultDiv.innerHTML = `<div class="error">Error: ${result.error}</div>`;
+                        }
+                    } catch (error) {
+                        resultDiv.innerHTML = `<div class="error">Error: Hubo un problema al procesar tu grabación. Por favor, inténtalo de nuevo.</div>`;
+                    } finally {
+                        loadingDiv.classList.remove('active');
+                    }
+                };
+
+                recordBtn.addEventListener('click', toggleRecording);
+            } catch (err) {
+                console.error('Error accediendo a cámara/micrófono:', err);
+                alert('No se pudo acceder al micrófono o la cámara. Por favor, asegúrate de dar los permisos necesarios.');
+            }
+        }
+
+        function updateTimer() {
+            const now = Date.now();
+            const diff = now - startTime;
+            const minutes = Math.floor(diff / 60000);
+            const seconds = Math.floor((diff % 60000) / 1000);
+            timer.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function toggleRecording() {
+            if (mediaRecorder.state === 'inactive') {
+                recordedChunks = [];
+                mediaRecorder.start(1000);
+                recordBtn.classList.add('recording');
+                recordBtn.querySelector('.record-text').textContent = 'Detener Grabación';
+                startTime = Date.now();
+                timerInterval = setInterval(updateTimer, 1000);
+            } else {
+                mediaRecorder.stop();
+                recordBtn.classList.remove('recording');
+                recordBtn.querySelector('.record-text').textContent = 'Iniciar Grabación';
+                clearInterval(timerInterval);
+                timer.textContent = '00:00';
+                const tracks = preview.srcObject.getTracks();
+                tracks.forEach(track => track.stop());
+                preview.srcObject = null;
+                document.getElementById('camera-waiting').style.display = 'flex';
+                setupRecording();
+            }
+        }
+
+        document.getElementById('cameraSelect').addEventListener('change', () => {
+            if (preview.srcObject) {
+                preview.srcObject.getTracks().forEach(track => track.stop());
+                preview.srcObject = null;
+            }
+            setupRecording();
+        });
+
+        // --- Subida de archivo ---
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const resultDiv = document.getElementById('result');
+            const submitBtn = form.querySelector('button');
+            const loadingDiv = document.getElementById('loading');
+            try {
+                submitBtn.disabled = true;
+                loadingDiv.classList.add('active');
+                resultDiv.innerHTML = '';
+                const formData = new FormData(form);
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    resultDiv.innerHTML = formatResult(result);
+                } else {
+                    resultDiv.innerHTML = `<div class="error">Error: ${result.error}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">Error: Hubo un problema al procesar tu archivo. Por favor, inténtalo de nuevo.</div>`;
+            } finally {
+                submitBtn.disabled = false;
+                loadingDiv.classList.remove('active');
+            }
+        });
+
+        // --- Formateo de resultados ---
+        function formatResult(result) {
+            if (!result) return '';
+            let html = '<div class="result-section">';
+            if (result.qa_blocks && Array.isArray(result.qa_blocks) && result.qa_blocks.length > 0) {
+                html += `<h3>Pregunta y Respuesta</h3>`;
+                result.qa_blocks.forEach(block => {
+                    if (block.tipo === 'pregunta') {
+                        html += `<div style="background:#e3f2fd;padding:0.7em 1em;margin:0.5em 0;border-radius:6px;border-left:4px solid #1976d2;"><b>Pregunta:</b> ${block.texto}</div>`;
+                    } else {
+                        html += `<div style="background:#fff3e0;padding:0.7em 1em;margin:0.5em 0;border-radius:6px;border-left:4px solid #f57c00;"><b>Respuesta:</b> ${block.texto}</div>`;
+                    }
+                });
+            } else if (result.utterances && Array.isArray(result.utterances) && result.utterances.length > 0) {
+                html += `<h3>Transcripción por Hablante</h3>`;
+                result.utterances.forEach(u => {
+                    html += `<p><b>HABLANTE ${u.speaker}:</b> ${u.text}</p>`;
+                });
+            } else if (result.text) {
+                html += `
+                    <h3>Transcripción</h3>
+                    <p>${result.text}</p>
+                `;
+            }
+            if (result.scores) {
+                const ruleLabels = {
+                    'historia': 'HISTORIA Y ORÍGENES',
+                    'mision_vision': 'MISIÓN Y VISIÓN',
+                    'productos': 'PRODUCTOS Y SERVICIOS',
+                    'valores': 'VALORES Y CULTURA',
+                    'mercado': 'MERCADO Y COMPETENCIA',
+                    'logros': 'LOGROS Y RECONOCIMIENTOS',
+                    'overall': 'PUNTUACIÓN GLOBAL'
+                };
+                html += `<h3>Puntuaciones por criterio de empresa</h3><ul>`;
+                Object.entries(result.scores).forEach(([key, value]) => {
+                    if (key !== 'overall') {
+                        html += `<li><b>${ruleLabels[key] || key}:</b> <span class="score">${value}/10</span></li>`;
+                    }
+                });
+                html += `</ul><h4>Puntuación Global: <span class="score">${result.scores.overall}/10</span></h4>`;
+            }
+            if (result.feedback) {
+                html += `<h3>Retroalimentación Detallada</h3><ul>`;
+                result.feedback.forEach(item => {
+                    html += `<li>${item}</li>`;
+                });
+                html += `</ul>`;
+            }
+            if (result.duration) {
+                const minutes = Math.floor(result.duration / 60);
+                const seconds = Math.round(result.duration % 60);
+                html += `
+                    <h3>Duración</h3>
+                    <p>${minutes} minutos y ${seconds} segundos</p>
+                `;
+            }
+            html += '</div>';
+            return html;
+        }
+
+        // Inicializar grabación al cargar la página
+        window.addEventListener('DOMContentLoaded', () => {
+            setupRecording();
+        });
     </script>
 </body>
 </html> 
