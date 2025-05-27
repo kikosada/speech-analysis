@@ -75,11 +75,11 @@ def index():
 def login():
     user_type = request.args.get('user_type', 'asesor')
     session['user_type'] = user_type
-    redirect_uri = url_for('authorized', _external=True)
+    redirect_uri = url_for('auth_callback', _external=True)
     return google.authorize_redirect(redirect_uri)
 
-@app.route('/login/callback')
-def authorized():
+@app.route('/auth/callback')
+def auth_callback():
     token = google.authorize_access_token()
     userinfo = token['userinfo']
     user = User(
