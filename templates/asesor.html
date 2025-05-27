@@ -3,30 +3,359 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bienvenido Asesor</title>
+    <title>Analizador de Presentaciones de Ventas</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f4f4f4;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            line-height: 1.6;
+            background: #f0f2f5;
         }
         .container {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 1.5rem;
             text-align: center;
-            padding: 20px;
-            background-color: white;
+        }
+        .description {
+            color: #666;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .upload-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        .file-input {
+            padding: 2rem;
+            border: 2px dashed #3498db;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+            background: #f8fafc;
+            transition: all 0.3s ease;
+        }
+        .file-input:hover {
+            border-color: #2980b9;
+            background: #f1f5f9;
+        }
+        .submit-btn {
+            background: #3498db;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        .submit-btn:hover {
+            background: #2980b9;
+            transform: translateY(-1px);
+        }
+        .submit-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .mis-archivos-btn {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+        #result {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            border-radius: 8px;
+            background: #f8fafc;
+            white-space: pre-wrap;
+        }
+        .error {
+            color: #e74c3c;
+            background: #fdf0ef;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 2rem 0;
+        }
+        .loading.active {
+            display: block;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .result-section {
+            margin-top: 1rem;
+            padding: 1rem;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+        }
+        .result-section h3 {
+            margin: 0 0 0.5rem 0;
+            color: #2c3e50;
+        }
+        .score {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #27ae60;
+        }
+        .recording-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        .record-btn {
+            background: #e74c3c;
+            color: white;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+        }
+        .record-btn:hover {
+            background: #c0392b;
+        }
+        .record-btn.recording {
+            animation: pulse 1.5s infinite;
+        }
+        .record-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+        .record-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: white;
+        }
+        .recording .record-indicator {
+            background: #e74c3c;
+        }
+        .timer {
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .tab {
+            padding: 0.5rem 1rem;
+            border: none;
+            background: #f0f2f5;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .tab.active {
+            background: #3498db;
+            color: white;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        #preview {
+            width: 100%;
+            max-width: 640px;
+            margin: 1rem auto;
+            border-radius: 8px;
+            background: #e0e0e0;
+            display: block;
+            min-height: 240px;
+            object-fit: cover;
+        }
+        #camera-waiting {
+            position: absolute;
+            left: 0; right: 0; top: 0; bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.8);
+            font-size: 1.2rem;
+            color: #666;
+            z-index: 2;
+        }
+        @media (max-width: 600px) {
+            #preview {
+                min-height: 180px;
+            }
+        }
+        .upload-section, .record-section {
+            display: none;
+        }
+        .upload-section.active, .record-section.active {
+            display: block;
+        }
+        .no-mirror {
+            transform: scaleX(1) !important;
+        }
+        .mirror {
+            transform: scaleX(-1) !important;
+        }
+        .login-mobile-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 80vh;
+            max-width: 400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            padding: 2.5rem 1.2rem;
+        }
+        .login-mobile-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .login-mobile-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            margin-top: 1.2rem;
+            width: 100%;
+            max-width: 220px;
+            box-shadow: 0 1px 4px rgba(52,152,219,0.08);
+            transition: background 0.2s;
+            display: block;
+            text-align: center;
+        }
+        .login-mobile-btn:hover {
+            background: #217dbb;
+        }
+        .login-outer-center {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f0f2f5;
+        }
+        @media (max-width: 600px) {
+            .login-mobile-title {
+                font-size: 1.1rem;
+            }
+            .login-mobile-box {
+                padding: 1.2rem 0.5rem;
+                max-width: 95vw;
+            }
+            .login-mobile-btn {
+                font-size: 0.98rem;
+                max-width: 95vw;
+                padding: 1rem 0.5rem;
+            }
+        }
+        .company-input {
+            margin-bottom: 1rem;
+            padding: 0.8rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .company-input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Bienvenido Asesor</h1>
-        <p>Esta es la página para asesores.</p>
+        <div style="text-align:right; margin-bottom:1rem;">
+            <span>Bienvenido, {{ current_user.name }} ({{ current_user.email }})</span>
+            <a href="{{ url_for('logout') }}" style="margin-left:1rem; color:#e74c3c;">Cerrar sesión</a>
+        </div>
+        <div style="text-align:right; margin-bottom:1rem;">
+            <a href="{{ url_for('mis_archivos') }}" class="submit-btn mis-archivos-btn" style="background:#6c63ff;">Mis Archivos</a>
+        </div>
+        {% if session['empresa'] %}
+        <div style="margin-bottom:1rem; text-align:center;">
+            <b>Empresa actual:</b> {{ session['empresa'] }}
+            <a href="{{ url_for('empresa') }}" style="margin-left:1rem; color:#3498db; text-decoration:underline;">Cambiar empresa</a>
+        </div>
+        {% endif %}
+        <h1>Analizador de Presentaciones de Ventas</h1>
+        <p class="description">
+            Graba o sube tu presentación de ventas y recibe retroalimentación detallada sobre tu desempeño.<br>
+            Formatos soportados: MP3, WAV, M4A, FLAC, MP4, WEBM
+        </p>
+        <div style="text-align:center; margin-bottom:1rem;">
+            <label for="cameraSelect">Cámara:</label>
+            <select id="cameraSelect">
+                <option value="environment">Trasera</option>
+                <option value="user">Frontal</option>
+            </select>
+        </div>
+        <div class="tabs">
+            <button class="tab active" data-tab="record">Grabar</button>
+            <button class="tab" data-tab="upload">Subir Archivo</button>
+        </div>
+        <div class="record-section active" style="position:relative;">
+            <div id="camera-waiting">Esperando cámara...</div>
+            <video id="preview" autoplay muted playsinline></video>
+            <div class="recording-controls">
+                <button id="recordBtn" class="record-btn">
+                    <span class="record-indicator"></span>
+                    <span class="record-text">Iniciar Grabación</span>
+                </button>
+                <div class="timer" id="timer">00:00</div>
+            </div>
+        </div>
+        <div class="upload-section">
+            <form class="upload-form" id="uploadForm">
+                <div class="file-input">
+                    <input type="file" name="file" accept=".mp3,.wav,.m4a,.flac,.mp4,.webm" required>
+                    <p>Arrastra y suelta tu archivo de audio aquí o haz clic para seleccionar</p>
+                </div>
+                <button type="submit" class="submit-btn">Analizar Presentación</button>
+            </form>
+        </div>
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Analizando tu presentación... Esto puede tomar unos minutos.</p>
+        </div>
+        <div id="result"></div>
     </div>
+    <script>
+        // El mismo JS de la página principal para grabar, subir y mostrar resultados
+        // ... (puedes copiar el JS de la versión anterior aquí) ...
+    </script>
 </body>
 </html> 
