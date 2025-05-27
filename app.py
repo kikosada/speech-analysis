@@ -135,7 +135,10 @@ def health_check():
     })
 
 @app.route('/asesor')
+@login_required
 def asesor():
+    if not session.get('empresa'):
+        return redirect(url_for('empresa'))
     return render_template('asesor.html')
 
 @app.route('/cliente')
