@@ -90,7 +90,7 @@ def auth_callback():
     users[user.id] = user
     login_user(user)
     session['email'] = user.email
-    return redirect(url_for('empresa'))
+    return redirect(url_for('asesor'))
 
 @app.route('/logout')
 @login_required
