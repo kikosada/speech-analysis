@@ -67,13 +67,19 @@ users = {}
 def load_user(user_id):
     return users.get(user_id)
 
+@app.route('/')
+def index():
+    return render_template('index.html')
+
 @app.route('/login')
 def login():
-    redirect_uri = url_for('auth_callback', _external=True)
+    user_type = request.args.get('user_type', 'asesor')
+    session['user_type'] = user_type
+    redirect_uri = url_for('authorized', _external=True)
     return google.authorize_redirect(redirect_uri)
 
-@app.route('/auth/callback')
-def auth_callback():
+@app.route('/login/callback')
+def authorized():
     token = google.authorize_access_token()
     userinfo = token['userinfo']
     user = User(
@@ -84,7 +90,10 @@ def auth_callback():
     users[user.id] = user
     login_user(user)
     session['email'] = user.email
-    return redirect(url_for('index'))
+    if session.get('user_type') == 'cliente':
+        return redirect(url_for('cliente'))
+    else:
+        return redirect(url_for('asesor'))
 
 @app.route('/logout')
 @login_required
@@ -125,11 +134,13 @@ def health_check():
         "servicio": "analizador-presentaciones"
     })
 
-@app.route('/')
-def index():
-    if current_user.is_authenticated and not session.get('empresa'):
-        return redirect(url_for('empresa'))
-    return render_template('index.html', is_index=True)
+@app.route('/asesor')
+def asesor():
+    return render_template('asesor.html')
+
+@app.route('/cliente')
+def cliente():
+    return render_template('cliente.html')
 
 def upload_file_to_azure(file_path, blob_name):
     account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
