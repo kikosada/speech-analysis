@@ -387,7 +387,8 @@
                 };
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 preview.srcObject = stream;
-                preview.classList.add(facingMode === 'user' ? 'mirror' : 'no-mirror');
+                preview.classList.add('mirror');
+                preview.classList.remove('no-mirror');
                 document.getElementById('camera-waiting').style.display = 'none';
 
                 mediaRecorder = new MediaRecorder(stream, {
