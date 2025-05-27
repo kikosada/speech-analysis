@@ -90,10 +90,7 @@ def auth_callback():
     users[user.id] = user
     login_user(user)
     session['email'] = user.email
-    if session.get('user_type') == 'cliente':
-        return redirect(url_for('cliente'))
-    else:
-        return redirect(url_for('asesor'))
+    return redirect(url_for('empresa'))
 
 @app.route('/logout')
 @login_required
@@ -371,8 +368,20 @@ def empresa():
         if not nombre_empresa:
             return render_template('empresa.html', error='Por favor ingresa el nombre de la empresa')
         session['empresa'] = nombre_empresa
-        return redirect(url_for('index'))
+        return redirect(url_for('seleccion_rol'))
     return render_template('empresa.html')
+
+@app.route('/seleccion-rol', methods=['GET', 'POST'])
+@login_required
+def seleccion_rol():
+    if request.method == 'POST':
+        user_type = request.form.get('user_type')
+        session['user_type'] = user_type
+        if user_type == 'cliente':
+            return redirect(url_for('cliente'))
+        else:
+            return redirect(url_for('asesor'))
+    return render_template('seleccion_rol.html')
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
