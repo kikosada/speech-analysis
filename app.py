@@ -73,13 +73,21 @@ def index():
     return render_template('index.html')
 
 @app.route('/login-asesor')
-def login_asesor():
+def login_asesor_page():
+    return render_template('login_asesor.html')
+
+@app.route('/login-cliente')
+def login_cliente_page():
+    return render_template('login_cliente.html')
+
+@app.route('/login-asesor/google')
+def login_asesor_google():
     session['tipo_login'] = 'asesor'
     redirect_uri = url_for('auth_callback', _external=True)
     return google.authorize_redirect(redirect_uri)
 
-@app.route('/login-cliente')
-def login_cliente():
+@app.route('/login-cliente/google')
+def login_cliente_google():
     session['tipo_login'] = 'cliente'
     redirect_uri = url_for('auth_callback', _external=True)
     return google.authorize_redirect(redirect_uri)
