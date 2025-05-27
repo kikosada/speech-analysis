@@ -16,6 +16,8 @@ from datetime import datetime, timedelta, timezone
 import mimetypes
 import uuid
 import unicodedata
+from azure_transcriber import AzureTranscriber
+import subprocess
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "supersecret")
@@ -214,129 +216,27 @@ def analyze_audio():
     try:
         if 'file' not in request.files:
             return jsonify({"error": "No se ha subido ningún archivo"}), 400
-        
-        company_name = session.get('empresa', '').strip()
-        if not company_name:
-            return jsonify({"error": "Por favor, selecciona la empresa antes de grabar o subir un archivo."}), 400
-        
         file = request.files['file']
-        logger.info(f"Archivo recibido: {file.filename}, tipo: {file.content_type}, tamaño: {getattr(file, 'content_length', 'desconocido')}")
         if file.filename == '':
             return jsonify({"error": "No se ha seleccionado ningún archivo"}), 400
-        
-        if not allowed_file(file.filename):
-            return jsonify({
-                "error": f"Tipo de archivo no permitido. Formatos soportados: {', '.join(ALLOWED_EXTENSIONS)}"
-            }), 400
-        
-        # Normalizar el nombre de la empresa para el nombre del archivo y rutas
-        empresa_slug = normaliza_empresa(company_name)
         filename = secure_filename(file.filename)
-        unique_id = f"{int(time.time())}_{uuid.uuid4().hex[:8]}"
-        filename_unique = f"recording_{empresa_slug}_{unique_id}_{filename}"
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename_unique)
-        
-        # Crear carpeta por usuario y empresa (normalizada)
-        user_folder = os.path.join('user_uploads', current_user.email)
-        company_folder = os.path.join(user_folder, empresa_slug)
-        os.makedirs(company_folder, exist_ok=True)
-        
-        # Nombre único para el archivo
-        user_file_path = os.path.join(company_folder, filename_unique)
-        
-        # Guardar el archivo en la carpeta de uploads primero
-        file.save(filepath)
-        logger.info(f"Intentando guardar archivo en: {filepath}")
-        logger.info(f"¿Existe el archivo después de guardar? {os.path.exists(filepath)}")
-        
-        # Validar si el archivo está vacío
-        if os.path.getsize(filepath) == 0:
-            logger.error(f"El archivo {filepath} está vacío.")
-            return jsonify({"error": "El archivo grabado está vacío. Por favor, asegúrate de grabar audio y vuelve a intentarlo."}), 400
-        
-        # Guardar copia en la carpeta del usuario/empresa
-        with open(filepath, 'rb') as src, open(user_file_path, 'wb') as dst:
-            dst.write(src.read())
-        logger.info(f"Copia guardada en: {user_file_path}")
-        
-        # Subir a Azure Blob Storage con la nueva estructura (empresa normalizada)
-        blob_name = f"{current_user.email}/{empresa_slug}/{filename_unique}"
-        upload_success = upload_file_to_azure(filepath, blob_name)
-        if not upload_success:
-            return jsonify({"error": "No se pudo subir el archivo a Azure Blob Storage"}), 500
-        if os.path.exists(filepath):
-            os.remove(filepath)
-            logger.info(f"Archivo local eliminado tras subir a Azure: {filename_unique}")
-        
-        # Extrae la extensión del blob_name
-        ext = os.path.splitext(blob_name)[1]
+        ext = os.path.splitext(filename)[1].lower()
         with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
-            local_temp_path = tmp.name
-
-        download_success = download_file_from_azure(blob_name, local_temp_path)
-        if not download_success:
-            return jsonify({"error": "No se pudo descargar el archivo de Azure Blob Storage"}), 500
-
-        # Log de depuración: tamaño y tipo de archivo
-        file_size = os.path.getsize(local_temp_path)
-        file_type, _ = mimetypes.guess_type(local_temp_path)
-        logger.info(f"Archivo descargado: {local_temp_path}, tamaño: {file_size} bytes, tipo: {file_type}")
-        if file_size == 0:
-            logger.error(f"El archivo descargado está vacío: {local_temp_path}")
-            return jsonify({"error": "El archivo descargado está vacío o corrupto. Por favor, intenta de nuevo."}), 400
-
-        # Validación de extensión
-        ext = os.path.splitext(local_temp_path)[1].lower()
-        if ext not in ['.webm', '.m4a', '.mp3', '.wav', '.flac', '.mp4']:
-            logger.error(f"Extensión no permitida: {ext}")
-            return jsonify({"error": f"Formato no soportado. Formatos válidos: .webm, .m4a, .mp3, .wav, .flac, .mp4"}), 400
-
-        transcriber = Transcriber()
-        raw_result = transcriber.transcribe(local_temp_path)
-        if os.path.exists(local_temp_path):
-            os.remove(local_temp_path)
-        formatted_result = format_analysis_result(raw_result)
-        formatted_result['uploaded_by'] = current_user.email
-        
-        # Guardar registro en CSV
-        log_path = os.path.join(os.getcwd(), 'uploads_log.csv')
-        with open(log_path, 'a', newline='', encoding='utf-8') as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow([
-                current_user.email,
-                filename_unique,
-                user_file_path,
-                request.remote_addr,
-                datetime.now().isoformat()
-            ])
-        logger.info(f"Archivo analizado exitosamente: {filename_unique}")
-
-        # Guardar score como txt
-        puntuacion_path = os.path.join(company_folder, f"{empresa_slug}_puntuacion.txt")
-        with open(puntuacion_path, 'w', encoding='utf-8') as f:
-            f.write("Puntuaciones de la IA para la empresa: " + company_name + "\n\n")
-            for key, value in formatted_result.get('scores', {}).items():
-                f.write(f"{key.capitalize()}: {value}/10\n")
-            f.write("\nPuntuación global: {}\n".format(formatted_result.get('scores', {}).get('overall', 'N/A')))
-
-        # Guardar retroalimentación como txt
-        retro_path = os.path.join(company_folder, f"{empresa_slug}_retroalimentacion.txt")
-        with open(retro_path, 'w', encoding='utf-8') as f:
-            f.write("Retroalimentación de la IA para la empresa: " + company_name + "\n\n")
-            feedback = formatted_result.get('feedback', [])
-            if feedback is None:
-                feedback = []
-            for item in feedback:
-                f.write(f"- {item}\n")
-
-        # Subir los txt a Azure Blob Storage en la misma carpeta (empresa normalizada)
-        blob_puntuacion = f"{current_user.email}/{empresa_slug}/{empresa_slug}_puntuacion.txt"
-        upload_file_to_azure(puntuacion_path, blob_puntuacion)
-        blob_retro = f"{current_user.email}/{empresa_slug}/{empresa_slug}_retroalimentacion.txt"
-        upload_file_to_azure(retro_path, blob_retro)
-
-        return jsonify(formatted_result)
-        
+            file.save(tmp.name)
+            audio_path = tmp.name
+        # Si es video, extraer audio a wav
+        if ext in ['.mp4', '.webm', '.mov', '.mkv']:
+            audio_wav = audio_path + '.wav'
+            subprocess.run([
+                'ffmpeg', '-y', '-i', audio_path, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
+            ], check=True)
+            audio_path = audio_wav
+        transcriber = AzureTranscriber(
+            speech_key="8sTDtUGB6YcaENbMygEAbBx8KFb9JWJJqH21QvkeYT979zp6gBxUJQQJ99BEACYeBjFXJ3w3AAAYACOGdl81",
+            service_region="eastus"
+        )
+        result = transcriber.transcribe(audio_path)
+        return jsonify(result)
     except Exception as e:
         logger.error(f"Error inesperado: {str(e)}")
         return jsonify({"error": "Ha ocurrido un error inesperado"}), 500
