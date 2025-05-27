@@ -72,10 +72,15 @@ def load_user(user_id):
 def index():
     return render_template('index.html')
 
-@app.route('/login')
-def login():
-    user_type = request.args.get('user_type', 'asesor')
-    session['user_type'] = user_type
+@app.route('/login-asesor')
+def login_asesor():
+    session['tipo_login'] = 'asesor'
+    redirect_uri = url_for('auth_callback', _external=True)
+    return google.authorize_redirect(redirect_uri)
+
+@app.route('/login-cliente')
+def login_cliente():
+    session['tipo_login'] = 'cliente'
     redirect_uri = url_for('auth_callback', _external=True)
     return google.authorize_redirect(redirect_uri)
 
@@ -91,7 +96,11 @@ def auth_callback():
     users[user.id] = user
     login_user(user)
     session['email'] = user.email
-    return redirect(url_for('asesor'))
+    tipo = session.pop('tipo_login', 'asesor')
+    if tipo == 'cliente':
+        return redirect(url_for('cliente'))
+    else:
+        return redirect(url_for('asesor'))
 
 @app.route('/logout')
 @login_required
