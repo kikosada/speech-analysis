@@ -217,13 +217,24 @@
         }
         @media (max-width: 600px) {
             #preview {
-                min-height: 180px;
+                min-height: 120px;
             }
             .container {
-                padding: 1.2rem 0.2rem;
+                padding: 0.5rem 0.1rem;
+                margin-top: 0.7rem !important;
             }
             .record-section, .upload-section {
-                padding: 1.2rem 0.5rem 1rem 0.5rem;
+                padding: 0.5rem 0.1rem 0.5rem 0.1rem;
+                margin-bottom: 0.7rem;
+            }
+            .speaker-card, .duration-block { padding: 0.7em 0.3em; }
+            .tabs {
+                gap: 0.4rem;
+                margin-bottom: 0.7rem;
+            }
+            h1 {
+                font-size: 1.2rem !important;
+                margin-bottom: 0.5rem !important;
             }
         }
         .loading {
@@ -515,6 +526,18 @@
         @media (max-width: 600px) {
             .speaker-card, .duration-block { padding: 1em 0.7em; }
         }
+        /* Logo responsive */
+        .crediclub-logo {
+            max-width: 220px;
+            height: 60px;
+        }
+        @media (max-width: 600px) {
+            .crediclub-logo {
+                max-width: 120px !important;
+                height: 32px !important;
+                margin-bottom: 0.2em !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -526,8 +549,8 @@
                 <a href="{{ url_for('empresa') }}" style="color:#1976d2;font-weight:600;font-size:1rem;">Cambiar</a>
             </div>
             <!-- Columna centro -->
-            <div style="flex:1;min-width:220px;text-align:center;display:flex;flex-direction:column;align-items:center;">
-                <img src="/static/crediclub_logo.png" alt="Crediclub" style="max-width:520px;height:150px;margin-bottom:0.7em;display:block;object-fit:contain;" />
+            <div style="flex:1;min-width:120px;text-align:center;display:flex;flex-direction:column;align-items:center;">
+                <img src="/static/crediclub_logo.png" alt="Crediclub" class="crediclub-logo" style="max-width:220px;height:60px;margin-bottom:0.4em;display:block;object-fit:contain;" />
             </div>
             <!-- Columna derecha -->
             <div style="flex:1;min-width:180px;text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:0.7em;">
