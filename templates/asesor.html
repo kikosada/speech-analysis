@@ -524,7 +524,8 @@
             <div style="flex:1;min-width:180px;text-align:left;display:flex;flex-direction:column;align-items:flex-start;gap:0.7em;">
                 <div style="font-weight:700;color:#222;font-size:1.12rem;">Empresa: {{ session['empresa'] if session['empresa'] else '' }}</div>
                 <a href="{{ url_for('empresa') }}" style="color:#1976d2;font-weight:600;font-size:1rem;">Cambiar</a>
-                <a href="{{ url_for('mis_archivos') }}" style="background:#444;color:#fff;padding:0.5em 1.5em;border-radius:10px;font-size:1rem;font-weight:600;text-decoration:none;box-shadow:0 1px 4px rgba(0,0,0,0.07);display:inline-block;margin-top:2.5em;">Mis Archivos</a>
+                <div style="height:2.5em;"></div>
+                <a href="{{ url_for('mis_archivos') }}" id="misArchivosBtn" style="background:#444;color:#fff;padding:0.5em 1.5em;border-radius:10px;font-size:1rem;font-weight:600;text-decoration:none;box-shadow:0 1px 4px rgba(0,0,0,0.07);display:inline-block;">Mis Archivos</a>
             </div>
             <!-- Columna centro -->
             <div style="flex:1;min-width:220px;text-align:center;display:flex;flex-direction:column;align-items:center;">
@@ -532,8 +533,9 @@
             </div>
             <!-- Columna derecha -->
             <div style="flex:1;min-width:180px;text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:0.7em;">
-                <div style="color:#34495e;font-weight:500;font-size:1.12rem;margin-top:0;">Bienvenido, {{ current_user.name }}</div>
-                <a href="{{ url_for('logout') }}" style="background:#e74c3c;color:#fff;padding:0.5em 1.5em;border-radius:10px;font-weight:600;font-size:1rem;text-decoration:none;display:inline-block;margin-top:2.5em;">Cerrar sesión</a>
+                <div style="color:#34495e;font-weight:bold;font-size:1.12rem;margin-top:0;">Bienvenido, {{ current_user.name }}</div>
+                <div style="height:2.5em;"></div>
+                <a href="{{ url_for('logout') }}" id="cerrarSesionBtn" style="background:#e74c3c;color:#fff;padding:0.5em 1.5em;border-radius:10px;font-weight:600;font-size:1rem;text-decoration:none;display:inline-block;">Cerrar sesión</a>
             </div>
         </div>
         <h1 style="margin-top:0.1em;font-size:2.1rem;letter-spacing:-1px;text-align:center;">AsesorIA</h1>
@@ -545,8 +547,8 @@
             </select>
         </div>
         <div class="tabs" style="justify-content:center;gap:1.2rem;margin-bottom:1.5rem;">
-            <button class="tab active" data-tab="record" style="background:#bbb;color:#222;border-radius:10px;padding:0.5em 1.2em;font-size:0.98rem;font-weight:600;">Grabar</button>
-            <button class="tab" data-tab="upload" style="background:#bbb;color:#222;border-radius:10px;padding:0.5em 1.2em;font-size:0.98rem;font-weight:600;">Subir Archivo</button>
+            <button class="tab active" data-tab="record" id="grabarTab" style="background:#3498db;color:#fff;border-radius:10px;padding:0.5em 1.2em;font-size:0.98rem;font-weight:600;">Grabar</button>
+            <button class="tab" data-tab="upload" id="subirTab" style="background:#bbb;color:#222;border-radius:10px;padding:0.5em 1.2em;font-size:0.98rem;font-weight:600;">Subir Archivo</button>
         </div>
         <div class="record-section active" style="position:relative;">
             <div id="camera-waiting">Esperando cámara...</div>
@@ -582,8 +584,25 @@
                 document.querySelectorAll('.upload-section, .record-section').forEach(s => s.classList.remove('active'));
                 tab.classList.add('active');
                 document.querySelector(`.${tab.dataset.tab}-section`).classList.add('active');
+                // Cambia color de los botones según la pestaña activa
+                if(tab.dataset.tab === 'record') {
+                    document.getElementById('grabarTab').style.background = '#3498db';
+                    document.getElementById('grabarTab').style.color = '#fff';
+                    document.getElementById('subirTab').style.background = '#bbb';
+                    document.getElementById('subirTab').style.color = '#222';
+                } else {
+                    document.getElementById('subirTab').style.background = '#3498db';
+                    document.getElementById('subirTab').style.color = '#fff';
+                    document.getElementById('grabarTab').style.background = '#bbb';
+                    document.getElementById('grabarTab').style.color = '#222';
+                }
             });
         });
+        // Inicializa colores al cargar
+        document.getElementById('grabarTab').style.background = '#3498db';
+        document.getElementById('grabarTab').style.color = '#fff';
+        document.getElementById('subirTab').style.background = '#bbb';
+        document.getElementById('subirTab').style.color = '#222';
 
         // --- Grabación de video/audio ---
         let mediaRecorder;
