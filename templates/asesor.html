@@ -7,57 +7,139 @@
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
-            padding: 2rem;
-            line-height: 1.6;
-            background: #f0f2f5;
+            padding: 2.5rem 1rem;
+            line-height: 1.7;
+            background: linear-gradient(120deg, #f0f2f5 60%, #e3f0ff 100%);
         }
         .container {
-            background: white;
-            border-radius: 12px;
-            padding: 2rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            background: #fff;
+            border-radius: 18px;
+            padding: 2.5rem 2rem 2rem 2rem;
+            box-shadow: 0 4px 24px rgba(52,152,219,0.10);
+            margin-top: 2.5rem;
         }
         h1 {
-            color: #2c3e50;
-            margin-bottom: 1.5rem;
+            color: #1a355e;
+            margin-bottom: 1.2rem;
             text-align: center;
+            font-size: 2.2rem;
+            font-weight: 800;
+            letter-spacing: -1px;
         }
         .description {
-            color: #666;
+            color: #4a6073;
             text-align: center;
+            margin-bottom: 2.2rem;
+            font-size: 1.1rem;
+        }
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.2rem;
+        }
+        .user-info {
+            color: #34495e;
+            font-weight: 500;
+        }
+        .logout-link {
+            color: #e74c3c;
+            margin-left: 1.2rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .logout-link:hover {
+            color: #c0392b;
+        }
+        .mis-archivos-btn {
+            background: #6c63ff;
+            color: #fff;
+            border-radius: 8px;
+            padding: 0.6rem 1.2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            box-shadow: 0 1px 4px rgba(108,99,255,0.08);
+            transition: background 0.2s;
+        }
+        .mis-archivos-btn:hover {
+            background: #4b44b7;
+        }
+        .empresa-bar {
+            margin-bottom: 1.5rem;
+            text-align: center;
+            font-size: 1.08rem;
+        }
+        .empresa-bar b {
+            color: #1976d2;
+        }
+        .empresa-bar a {
+            color: #3498db;
+            text-decoration: underline;
+            margin-left: 0.7em;
+            font-weight: 500;
+        }
+        .empresa-bar a:hover {
+            color: #217dbb;
+        }
+        .tabs {
+            display: flex;
+            gap: 1.2rem;
+            margin-bottom: 2.2rem;
+            justify-content: center;
+        }
+        .tab {
+            padding: 0.7rem 1.5rem;
+            border: none;
+            background: #f0f2f5;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            font-size: 1.08rem;
+            font-weight: 600;
+            color: #1976d2;
+            transition: background 0.2s, color 0.2s;
+        }
+        .tab.active {
+            background: #3498db;
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(52,152,219,0.08);
+        }
+        .record-section, .upload-section {
+            background: #f8fafc;
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 1px 4px rgba(52,152,219,0.04);
+            padding: 2rem 1.5rem 1.5rem 1.5rem;
             margin-bottom: 2rem;
         }
-        .upload-form {
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
         .file-input {
-            padding: 2rem;
+            padding: 2.2rem 1.2rem;
             border: 2px dashed #3498db;
-            border-radius: 8px;
+            border-radius: 10px;
             text-align: center;
-            background: #f8fafc;
+            background: #f4f8fb;
             transition: all 0.3s ease;
         }
         .file-input:hover {
-            border-color: #2980b9;
-            background: #f1f5f9;
+            border-color: #1976d2;
+            background: #e3f2fd;
         }
         .submit-btn {
             background: #3498db;
             color: white;
-            padding: 0.8rem 1.5rem;
+            padding: 1rem 2.2rem;
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 1rem;
+            font-size: 1.08rem;
+            font-weight: 600;
             transition: all 0.3s ease;
+            margin-top: 1.2rem;
         }
         .submit-btn:hover {
-            background: #2980b9;
+            background: #217dbb;
             transform: translateY(-1px);
         }
         .submit-btn:disabled {
@@ -65,23 +147,84 @@
             cursor: not-allowed;
             transform: none;
         }
-        .mis-archivos-btn {
-            padding: 0.5rem 1rem;
-            font-size: 0.9rem;
+        .recording-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+            margin: 2rem 0 0.5rem 0;
+            align-items: center;
         }
-        #result {
-            margin-top: 2rem;
-            padding: 1.5rem;
+        .record-btn {
+            background: #e74c3c;
+            color: white;
+            padding: 1.1rem 2.5rem;
+            border: none;
             border-radius: 8px;
-            background: #f8fafc;
-            white-space: pre-wrap;
+            cursor: pointer;
+            font-size: 1.15rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 1px 4px rgba(231,76,60,0.08);
         }
-        .error {
-            color: #e74c3c;
-            background: #fdf0ef;
-            padding: 1rem;
-            border-radius: 8px;
-            margin-top: 1rem;
+        .record-btn:hover {
+            background: #c0392b;
+        }
+        .record-btn.recording {
+            animation: pulse 1.5s infinite;
+        }
+        .record-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+        .record-indicator {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: white;
+            margin-right: 0.7em;
+        }
+        .recording .record-indicator {
+            background: #e74c3c;
+        }
+        .timer {
+            text-align: center;
+            font-size: 1.18rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-top: 0.5em;
+        }
+        #preview {
+            width: 100%;
+            max-width: 640px;
+            margin: 1.2rem auto 0.5rem auto;
+            border-radius: 10px;
+            background: #e0e0e0;
+            display: block;
+            min-height: 240px;
+            object-fit: cover;
+            box-shadow: 0 1px 4px rgba(52,152,219,0.04);
+        }
+        #camera-waiting {
+            position: absolute;
+            left: 0; right: 0; top: 0; bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.8);
+            font-size: 1.2rem;
+            color: #666;
+            z-index: 2;
+        }
+        @media (max-width: 600px) {
+            #preview {
+                min-height: 180px;
+            }
+            .container {
+                padding: 1.2rem 0.2rem;
+            }
+            .record-section, .upload-section {
+                padding: 1.2rem 0.5rem 1rem 0.5rem;
+            }
         }
         .loading {
             display: none;
@@ -376,27 +519,27 @@
 </head>
 <body>
     <div class="container">
-        <div style="text-align:right; margin-bottom:1rem;">
-            <span>Bienvenido, {{ current_user.name }} ({{ current_user.email }})</span>
-            <a href="{{ url_for('logout') }}" style="margin-left:1rem; color:#e74c3c;">Cerrar sesión</a>
-        </div>
-        <div style="text-align:right; margin-bottom:1rem;">
-            <a href="{{ url_for('mis_archivos') }}" class="submit-btn mis-archivos-btn" style="background:#6c63ff;">Mis Archivos</a>
+        <div class="top-bar">
+            <div class="user-info">Bienvenido, {{ current_user.name }} ({{ current_user.email }})</div>
+            <div>
+                <a href="{{ url_for('mis_archivos') }}" class="mis-archivos-btn">Mis Archivos</a>
+                <a href="{{ url_for('logout') }}" class="logout-link">Cerrar sesión</a>
+            </div>
         </div>
         {% if session['empresa'] %}
-        <div style="margin-bottom:1rem; text-align:center;">
+        <div class="empresa-bar">
             <b>Empresa actual:</b> {{ session['empresa'] }}
-            <a href="{{ url_for('empresa') }}" style="margin-left:1rem; color:#3498db; text-decoration:underline;">Cambiar empresa</a>
+            <a href="{{ url_for('empresa') }}">Cambiar empresa</a>
         </div>
         {% endif %}
         <h1>Analizador de Presentaciones de Ventas</h1>
         <p class="description">
             Graba o sube tu presentación de ventas y recibe retroalimentación detallada sobre tu desempeño.<br>
-            Formatos soportados: MP3, WAV, M4A, FLAC, MP4, WEBM
+            <span style="color:#1976d2;font-weight:500;">Formatos soportados:</span> MP3, WAV, M4A, FLAC, MP4, WEBM
         </p>
-        <div style="text-align:center; margin-bottom:1rem;">
-            <label for="cameraSelect">Cámara:</label>
-            <select id="cameraSelect">
+        <div style="text-align:center; margin-bottom:1.5rem;">
+            <label for="cameraSelect" style="font-weight:600;color:#34495e;">Cámara:</label>
+            <select id="cameraSelect" style="padding:0.4em 1em;border-radius:6px;border:1px solid #b3c6e0;font-size:1em;">
                 <option value="environment">Trasera</option>
                 <option value="user">Frontal</option>
             </select>
@@ -420,7 +563,7 @@
             <form class="upload-form" id="uploadForm">
                 <div class="file-input">
                     <input type="file" name="file" accept=".mp3,.wav,.m4a,.flac,.mp4,.webm" required>
-                    <p>Arrastra y suelta tu archivo de audio aquí o haz clic para seleccionar</p>
+                    <p style="color:#4a6073;">Arrastra y suelta tu archivo de audio aquí o haz clic para seleccionar</p>
                 </div>
                 <button type="submit" class="submit-btn">Analizar Presentación</button>
             </form>
