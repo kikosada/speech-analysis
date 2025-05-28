@@ -601,9 +601,10 @@
     <div class="container" style="max-width:900px;margin:2.5rem auto 0 auto;">
         <!-- CABECERA MÓVIL -->
         <div class="cabecera-movil" style="display:none;">
-            <div class="fila-movil">
+            <div class="fila-movil" style="flex-direction:column !important;align-items:flex-start !important;gap:0.1em !important;">
                 <div style="font-weight:700;color:#222;">Empresa: {{ session['empresa'] if session['empresa'] else '' }}</div>
-                <div style="color:#34495e;font-weight:bold;">Hola, {{ current_user.name }}</div>
+                <a href="{{ url_for('empresa') }}" style="color:#1976d2;font-weight:500;font-size:0.98rem;text-decoration:underline;margin-left:0.1em;margin-bottom:0.2em;">Cambiar</a>
+                <div style="color:#34495e;font-weight:bold;align-self:flex-end;">Hola, {{ current_user.name }}</div>
             </div>
             <div class="logo-movil">
                 <img src="/static/crediclub_logo.png" alt="Crediclub" class="crediclub-logo" />
