@@ -294,6 +294,84 @@
             border-color: #3498db;
             box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
         }
+        /* Tarjetas de hablante */
+        .speaker-card {
+            background: #f4f8fb;
+            border-radius: 10px;
+            box-shadow: 0 1px 4px rgba(52,152,219,0.07);
+            margin-bottom: 1.2em;
+            padding: 1em 1.5em;
+            border-left: 6px solid #3498db;
+        }
+        .speaker-title {
+            font-weight: 700;
+            color: #1976d2;
+            margin-bottom: 0.3em;
+        }
+        .score-bar {
+            height: 18px;
+            border-radius: 8px;
+            background: #e0e0e0;
+            margin: 0.3em 0 1em 0;
+            overflow: hidden;
+            position: relative;
+        }
+        .score-bar-inner {
+            height: 100%;
+            border-radius: 8px;
+            transition: width 0.7s;
+        }
+        .score-label {
+            font-weight: 600;
+            margin-bottom: 0.2em;
+            display: flex;
+            align-items: center;
+        }
+        .score-label .icon {
+            margin-right: 0.5em;
+        }
+        .feedback-list {
+            list-style: none;
+            padding-left: 0;
+        }
+        .feedback-list li {
+            margin-bottom: 0.7em;
+            padding-left: 1.5em;
+            position: relative;
+        }
+        .feedback-list li::before {
+            content: '✔️';
+            position: absolute;
+            left: 0;
+            top: 0.1em;
+        }
+        .result-section h3 {
+            margin-top: 2em;
+            margin-bottom: 0.7em;
+        }
+        .duration-block {
+            background: #eafaf1;
+            border-left: 6px solid #27ae60;
+            border-radius: 10px;
+            padding: 0.7em 1.5em;
+            margin: 1.5em 0;
+            color: #218c5a;
+            font-weight: 500;
+        }
+        .score-green { background: #27ae60; }
+        .score-yellow { background: #f1c40f; }
+        .score-red { background: #e74c3c; }
+        .score-bar-inner span {
+            position: absolute;
+            right: 10px;
+            color: #fff;
+            font-size: 0.95em;
+            font-weight: 600;
+        }
+        /* Responsive */
+        @media (max-width: 600px) {
+            .speaker-card, .duration-block { padding: 1em 0.7em; }
+        }
     </style>
 </head>
 <body>
@@ -508,26 +586,19 @@
         function formatResult(result) {
             if (!result) return '';
             let html = '<div class="result-section">';
-            if (result.qa_blocks && Array.isArray(result.qa_blocks) && result.qa_blocks.length > 0) {
-                html += `<h3>Pregunta y Respuesta</h3>`;
-                result.qa_blocks.forEach(block => {
-                    if (block.tipo === 'pregunta') {
-                        html += `<div style="background:#e3f2fd;padding:0.7em 1em;margin:0.5em 0;border-radius:6px;border-left:4px solid #1976d2;"><b>Pregunta:</b> ${block.texto}</div>`;
-                    } else {
-                        html += `<div style="background:#fff3e0;padding:0.7em 1em;margin:0.5em 0;border-radius:6px;border-left:4px solid #f57c00;"><b>Respuesta:</b> ${block.texto}</div>`;
+            // Transcripción agrupada por hablante (si existe)
+            if (result.text && result.text.includes(':')) {
+                html += `<h3>Transcripción por Hablante</h3>`;
+                // Agrupar por hablante
+                const bloques = result.text.split(/\n+/).filter(Boolean);
+                bloques.forEach(bloque => {
+                    const match = bloque.match(/^(Hablante \d+): (.*)$/i);
+                    if (match) {
+                        html += `<div class='speaker-card'><div class='speaker-title'>${match[1]}</div><div>${match[2]}</div></div>`;
                     }
                 });
-            } else if (result.utterances && Array.isArray(result.utterances) && result.utterances.length > 0) {
-                html += `<h3>Transcripción por Hablante</h3>`;
-                result.utterances.forEach(u => {
-                    html += `<p><b>HABLANTE ${u.speaker}:</b> ${u.text}</p>`;
-                });
-            } else if (result.text) {
-                html += `
-                    <h3>Transcripción</h3>
-                    <p>${result.text}</p>
-                `;
             }
+            // Puntuaciones
             if (result.scores) {
                 const ruleLabels = {
                     'historia': 'HISTORIA Y ORÍGENES',
@@ -538,28 +609,36 @@
                     'logros': 'LOGROS Y RECONOCIMIENTOS',
                     'overall': 'PUNTUACIÓN GLOBAL'
                 };
-                html += `<h3>Puntuaciones por criterio de empresa</h3><ul>`;
+                html += `<h3>Puntuaciones por criterio de empresa</h3>`;
                 Object.entries(result.scores).forEach(([key, value]) => {
                     if (key !== 'overall') {
-                        html += `<li><b>${ruleLabels[key] || key}:</b> <span class="score">${value}/10</span></li>`;
+                        let color = 'score-green';
+                        if (value < 6) color = 'score-red';
+                        else if (value < 8) color = 'score-yellow';
+                        html += `<div class='score-label'><span class='icon'>🏷️</span>${ruleLabels[key] || key}</div>`;
+                        html += `<div class='score-bar'><div class='score-bar-inner ${color}' style='width:${value*10}%'></div></div>`;
                     }
                 });
-                html += `</ul><h4>Puntuación Global: <span class="score">${result.scores.overall}/10</span></h4>`;
+                html += `<div class='score-label' style='margin-top:1em;'><span class='icon'>⭐</span>Puntuación Global</div>`;
+                let overall = result.scores.overall || 0;
+                let color = 'score-green';
+                if (overall < 6) color = 'score-red';
+                else if (overall < 8) color = 'score-yellow';
+                html += `<div class='score-bar'><div class='score-bar-inner ${color}' style='width:${overall*10}%'><span>${overall}/10</span></div></div>`;
             }
+            // Retroalimentación
             if (result.feedback) {
-                html += `<h3>Retroalimentación Detallada</h3><ul>`;
+                html += `<h3>Retroalimentación Detallada</h3><ul class='feedback-list'>`;
                 result.feedback.forEach(item => {
                     html += `<li>${item}</li>`;
                 });
                 html += `</ul>`;
             }
+            // Duración
             if (result.duration) {
                 const minutes = Math.floor(result.duration / 60);
                 const seconds = Math.round(result.duration % 60);
-                html += `
-                    <h3>Duración</h3>
-                    <p>${minutes} minutos y ${seconds} segundos</p>
-                `;
+                html += `<div class='duration-block'>Duración: ${minutes} minutos y ${seconds} segundos</div>`;
             }
             html += '</div>';
             return html;
