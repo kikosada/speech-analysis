@@ -1,6 +1,7 @@
 import azure.cognitiveservices.speech as speechsdk
 import os
 import tempfile
+from transcribe import analyze_company_knowledge  # Importar función de análisis
 
 class AzureTranscriber:
     def __init__(self, speech_key=None, service_region=None):
@@ -9,6 +10,7 @@ class AzureTranscriber:
 
     def transcribe(self, audio_path):
         speech_config = speechsdk.SpeechConfig(subscription=self.speech_key, region=self.service_region)
+        speech_config.speech_recognition_language = 'es-ES'  # Forzar español
         audio_config = speechsdk.audio.AudioConfig(filename=audio_path)
         transcriber = speechsdk.transcription.ConversationTranscriber(speech_config=speech_config, audio_config=audio_config)
 
@@ -45,7 +47,13 @@ class AzureTranscriber:
         transcript = ""
         for utt in utterances:
             transcript += f"{utt['speaker']}: {utt['text']}\n"
+
+        # Análisis de conocimiento de empresa (score y feedback)
+        scores, feedback = analyze_company_knowledge(transcript)
+
         return {
             'utterances': utterances,
-            'text': transcript.strip()
+            'text': transcript.strip(),
+            'scores': scores,
+            'feedback': feedback
         } 
