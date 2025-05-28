@@ -519,20 +519,22 @@
 </head>
 <body>
     <div class="container">
-        <div class="top-bar">
-            <div class="user-info">Bienvenido, {{ current_user.name }} ({{ current_user.email }})</div>
-            <div>
-                <a href="{{ url_for('mis_archivos') }}" class="mis-archivos-btn">Mis Archivos</a>
-                <a href="{{ url_for('logout') }}" class="logout-link">Cerrar sesión</a>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.2rem;">
+            <div style="flex:1;text-align:left;">
+                <div class="empresa-bar" style="margin-bottom:0;display:inline-block;">
+                    <b>Empresa:</b> {{ session['empresa'] if session['empresa'] else '' }}
+                    <a href="{{ url_for('empresa') }}" style="color:#1976d2;font-weight:600;">Cambiar</a>
+                </div>
+            </div>
+            <div style="flex:1;text-align:right;">
+                <span style="color:#34495e;font-weight:500;">Bienvenido, {{ current_user.name }}</span>
+                <a href="{{ url_for('logout') }}" class="logout-link" style="background:#e74c3c;color:#fff;padding:0.6em 1.2em;border-radius:8px;margin-left:1em;">Cerrar sesión</a>
             </div>
         </div>
-        {% if session['empresa'] %}
-        <div class="empresa-bar">
-            <b>Empresa actual:</b> {{ session['empresa'] }}
-            <a href="{{ url_for('empresa') }}">Cambiar empresa</a>
+        <div style="text-align:center;margin-bottom:1.2rem;">
+            <img src="/static/crediclub_logo.png" alt="Crediclub" style="max-width:180px;width:100%;margin-bottom:0.5em;" />
+            <h1 style="margin-top:0.2em;">AsesorIA</h1>
         </div>
-        {% endif %}
-        <h1>AsesorIA</h1>
         <p class="description">
             Graba o sube tu presentación de ventas y recibe retroalimentación detallada sobre tu desempeño.<br>
             <span style="color:#1976d2;font-weight:500;">Formatos soportados:</span> MP3, WAV, M4A, FLAC, MP4, WEBM
