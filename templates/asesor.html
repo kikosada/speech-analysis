@@ -518,26 +518,25 @@
     </style>
 </head>
 <body>
-    <div class="container" style="display:flex;flex-direction:column;align-items:center;max-width:500px;margin:2.5rem auto 0 auto;">
-        <img src="/static/crediclub_logo.png" alt="Crediclub" style="max-width:220px;height:54px;margin-bottom:1.2em;display:block;object-fit:contain;" />
-        <div style="text-align:center;margin-bottom:1.2em;">
-            <div style="font-weight:700;color:#222;font-size:1.12rem;">Empresa: {{ session['empresa'] if session['empresa'] else '' }}</div>
-            <div><a href="{{ url_for('empresa') }}" style="color:#1976d2;font-weight:600;font-size:1rem;display:inline-block;margin-top:0.2em;">Cambiar</a></div>
-        </div>
-        <div style="text-align:center;margin-bottom:1.2em;">
-            <div style="color:#34495e;font-weight:500;font-size:1.05rem;">Bienvenido, {{ current_user.name }}</div>
-            <div style="margin-top:0.4em;"><a href="{{ url_for('logout') }}" style="background:#e74c3c;color:#fff;padding:0.5em 1.5em;border-radius:10px;font-weight:600;font-size:1rem;text-decoration:none;display:inline-block;">Cerrar sesión</a></div>
-        </div>
-        <div style="display:flex;justify-content:center;align-items:center;gap:1.2em;margin-bottom:1.5em;">
-            <a href="{{ url_for('mis_archivos') }}" style="background:#444;color:#fff;padding:0.5em 1.5em;border-radius:10px;font-size:1rem;font-weight:600;text-decoration:none;box-shadow:0 1px 4px rgba(0,0,0,0.07);display:inline-block;">Mis Archivos</a>
-            <!-- Si quieres que Cerrar sesión esté aquí también, descomenta la siguiente línea -->
-            <!-- <a href="{{ url_for('logout') }}" style="background:#e74c3c;color:#fff;padding:0.5em 1.5em;border-radius:10px;font-weight:600;font-size:1rem;text-decoration:none;display:inline-block;">Cerrar sesión</a> -->
+    <div class="container" style="max-width:900px;margin:2.5rem auto 0 auto;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5em;">
+            <!-- Columna izquierda -->
+            <div style="flex:1;min-width:180px;text-align:left;display:flex;flex-direction:column;align-items:flex-start;gap:0.7em;">
+                <div style="font-weight:700;color:#222;font-size:1.12rem;">Empresa: {{ session['empresa'] if session['empresa'] else '' }}</div>
+                <a href="{{ url_for('empresa') }}" style="color:#1976d2;font-weight:600;font-size:1rem;">Cambiar</a>
+                <a href="{{ url_for('mis_archivos') }}" style="background:#444;color:#fff;padding:0.5em 1.5em;border-radius:10px;font-size:1rem;font-weight:600;text-decoration:none;box-shadow:0 1px 4px rgba(0,0,0,0.07);display:inline-block;margin-top:0.7em;">Mis Archivos</a>
+            </div>
+            <!-- Columna centro -->
+            <div style="flex:1;min-width:220px;text-align:center;display:flex;flex-direction:column;align-items:center;">
+                <img src="/static/crediclub_logo.png" alt="Crediclub" style="max-width:220px;height:54px;margin-bottom:0.7em;display:block;object-fit:contain;" />
+            </div>
+            <!-- Columna derecha -->
+            <div style="flex:1;min-width:180px;text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:0.7em;">
+                <div style="color:#34495e;font-weight:500;font-size:1.05rem;">Bienvenido, {{ current_user.name }}</div>
+                <a href="{{ url_for('logout') }}" style="background:#e74c3c;color:#fff;padding:0.5em 1.5em;border-radius:10px;font-weight:600;font-size:1rem;text-decoration:none;display:inline-block;">Cerrar sesión</a>
+            </div>
         </div>
         <h1 style="margin-top:0.1em;font-size:2.1rem;letter-spacing:-1px;text-align:center;">AsesorIA</h1>
-        <p class="description" style="margin-bottom:2em;text-align:center;">
-            Graba o sube tu presentación de ventas y recibe retroalimentación detallada sobre tu desempeño.<br>
-            <span style="color:#1976d2;font-weight:500;">Formatos soportados:</span> MP3, WAV, M4A, FLAC, MP4, WEBM
-        </p>
         <div style="text-align:center; margin-bottom:1.2rem;">
             <label for="cameraSelect" style="font-weight:600;color:#34495e;">Cámara:</label>
             <select id="cameraSelect" style="padding:0.3em 0.8em;border-radius:6px;border:1px solid #b3c6e0;font-size:0.98em;">
