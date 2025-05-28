@@ -751,12 +751,26 @@
             // Transcripción agrupada por hablante (si existe)
             if (result.text && result.text.includes(':')) {
                 html += `<h3>Transcripción por Hablante</h3>`;
+                // Colores para hablantes
+                const speakerColors = [
+                    {bg:'#e3f2fd', border:'#1976d2', label:'#1976d2'}, // azul
+                    {bg:'#e8f5e9', border:'#43a047', label:'#2e7d32'}, // verde
+                    {bg:'#fff3e0', border:'#f57c00', label:'#e65100'}, // naranja
+                    {bg:'#ede7f6', border:'#7e57c2', label:'#4527a0'}, // morado
+                    {bg:'#fce4ec', border:'#d81b60', label:'#880e4f'}, // rosa
+                    {bg:'#f3e5f5', border:'#8e24aa', label:'#4a148c'}  // violeta
+                ];
                 // Agrupar por hablante
                 const bloques = result.text.split(/\n+/).filter(Boolean);
                 bloques.forEach(bloque => {
-                    const match = bloque.match(/^(Hablante \d+): (.*)$/i);
+                    const match = bloque.match(/^(Hablante (\d+)):\s(.*)$/i);
                     if (match) {
-                        html += `<div class='speaker-card'><div class='speaker-title'>${match[1]}</div><div>${match[2]}</div></div>`;
+                        const idx = (parseInt(match[2],10)-1) % speakerColors.length;
+                        const color = speakerColors[idx];
+                        html += `<div style="background:${color.bg};border-radius:10px;padding:1em 1.2em;margin-bottom:1em;border-left:6px solid ${color.border};">
+                            <div style="font-weight:700;color:${color.label};margin-bottom:0.3em;">${match[1]}</div>
+                            <div>${match[3]}</div>
+                        </div>`;
                     }
                 });
             }
