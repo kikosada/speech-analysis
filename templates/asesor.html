@@ -521,21 +521,22 @@
     <div class="container">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.2rem;">
             <div style="flex:1;text-align:left;">
-                <div class="empresa-bar" style="margin-bottom:0;display:inline-block;">
-                    <b>Empresa:</b> {{ session['empresa'] if session['empresa'] else '' }}
-                    <a href="{{ url_for('empresa') }}" style="color:#1976d2;font-weight:600;">Cambiar</a>
-                </div>
+                <span style="font-weight:700;color:#222;font-size:1.08rem;">Empresa: {{ session['empresa'] if session['empresa'] else '' }}</span>
+                <a href="{{ url_for('empresa') }}" style="color:#1976d2;font-weight:600;margin-left:0.5em;">Cambiar</a>
             </div>
             <div style="flex:1;text-align:right;">
                 <span style="color:#34495e;font-weight:500;">Bienvenido, {{ current_user.name }}</span>
-                <a href="{{ url_for('logout') }}" class="logout-link" style="background:#e74c3c;color:#fff;padding:0.6em 1.2em;border-radius:8px;margin-left:1em;">Cerrar sesión</a>
+                <a href="{{ url_for('logout') }}" style="background:#e74c3c;color:#fff;padding:0.7em 1.5em;border-radius:12px;margin-left:1em;font-weight:700;font-size:1.05rem;text-decoration:none;">Cerrar sesión</a>
             </div>
         </div>
-        <div style="text-align:center;margin-bottom:1.2rem;">
-            <img src="/static/crediclub_logo.png" alt="Crediclub" style="max-width:180px;width:100%;margin-bottom:0.5em;" />
-            <h1 style="margin-top:0.2em;">AsesorIA</h1>
+        <div style="text-align:center;margin-bottom:0.5em;">
+            <img src="/static/crediclub_logo.png" alt="Crediclub" style="max-width:260px;width:100%;margin-bottom:0.2em;display:block;margin-left:auto;margin-right:auto;" />
+            <h1 style="margin-top:0.1em;font-size:2.3rem;letter-spacing:-1px;">AsesorIA</h1>
         </div>
-        <p class="description">
+        <div style="text-align:center;margin-bottom:2em;">
+            <a href="{{ url_for('mis_archivos') }}" style="background:#444;color:#fff;padding:0.8em 2.2em;border-radius:12px;font-size:1.08rem;font-weight:600;text-decoration:none;box-shadow:0 1px 4px rgba(0,0,0,0.07);display:inline-block;">Mis Archivos</a>
+        </div>
+        <p class="description" style="margin-bottom:2.2em;">
             Graba o sube tu presentación de ventas y recibe retroalimentación detallada sobre tu desempeño.<br>
             <span style="color:#1976d2;font-weight:500;">Formatos soportados:</span> MP3, WAV, M4A, FLAC, MP4, WEBM
         </p>
@@ -546,9 +547,9 @@
                 <option value="user">Frontal</option>
             </select>
         </div>
-        <div class="tabs">
-            <button class="tab active" data-tab="record">Grabar</button>
-            <button class="tab" data-tab="upload">Subir Archivo</button>
+        <div class="tabs" style="justify-content:center;gap:2.5rem;margin-bottom:2.2rem;">
+            <button class="tab active" data-tab="record" style="background:#bbb;color:#222;border-radius:12px;padding:1em 2.5em;font-size:1.15rem;font-weight:700;">Grabar</button>
+            <button class="tab" data-tab="upload" style="background:#bbb;color:#222;border-radius:12px;padding:1em 2.5em;font-size:1.15rem;font-weight:700;">Subir Archivo</button>
         </div>
         <div class="record-section active" style="position:relative;">
             <div id="camera-waiting">Esperando cámara...</div>
