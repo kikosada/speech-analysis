@@ -824,6 +824,13 @@
         window.addEventListener('DOMContentLoaded', () => {
             setupRecording();
         });
+
+        // Redirigir a /login-asesor después de logout
+        document.getElementById('cerrarSesionBtn').addEventListener('click', function(e) {
+            setTimeout(function() {
+                window.location.href = '/login-asesor';
+            }, 200);
+        });
     </script>
 </body>
 </html> 
