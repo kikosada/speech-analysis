@@ -612,7 +612,7 @@
                 </div>
                 <div style="display:flex;flex-direction:column;align-items:flex-end;">
                     <div style="color:#34495e;font-weight:bold;align-self:flex-end;white-space:nowrap;">Hola, {{ current_user.name }}</div>
-                    <a href="{{ url_for('logout') }}" style="color:#1976d2;font-size:0.98rem;text-decoration:underline;margin-top:0.1em;">Cerrar sesión</a>
+                    <a href="{{ url_for('logout') }}" style="color:#1976d2;font-size:0.98rem;text-decoration:underline;margin-top:0.1em;" id="cerrarSesionMovil">Cerrar sesión</a>
                 </div>
             </div>
             <div class="logo-movil" style="display:flex;justify-content:center;width:100%;margin-bottom:0.2em !important;">
@@ -941,12 +941,14 @@
             setupRecording();
         });
 
-        // Redirigir a /login-asesor después de logout
-        document.getElementById('cerrarSesionBtn').addEventListener('click', function(e) {
-            setTimeout(function() {
-                window.location.href = '/login-asesor';
-            }, 200);
-        });
+        // Redirigir a /login-asesor después de logout SOLO en móvil
+        if (window.innerWidth <= 600) {
+            document.getElementById('cerrarSesionMovil')?.addEventListener('click', function(e) {
+                setTimeout(function() {
+                    window.location.href = '/login-asesor';
+                }, 200);
+            });
+        }
     </script>
 </body>
 </html> 
