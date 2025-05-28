@@ -258,8 +258,8 @@
                 margin-bottom: 0.2em !important;
             }
             .crediclub-logo {
-                max-width: 90px !important;
-                height: 24px !important;
+                max-width: 180px !important;
+                height: 48px !important;
                 margin-bottom: 0.1em !important;
             }
             .botones-movil {
@@ -292,6 +292,10 @@
                 font-size: 0.95rem !important;
                 padding: 0.4em 0.7em !important;
                 border-radius: 7px !important;
+            }
+            h1 {
+                font-size: 2.2rem !important;
+                margin-bottom: 0.5rem !important;
             }
         }
         .loading {
@@ -606,15 +610,15 @@
                     <div style="font-weight:700;color:#222;">Empresa: {{ session['empresa'] if session['empresa'] else '' }}</div>
                     <a href="{{ url_for('empresa') }}" style="color:#1976d2;font-weight:500;font-size:0.98rem;text-decoration:underline;margin-left:0.1em;margin-bottom:0.2em;">Cambiar</a>
                 </div>
-                <div style="color:#34495e;font-weight:bold;align-self:flex-start;white-space:nowrap;">Hola, {{ current_user.name }}</div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;">
+                    <div style="color:#34495e;font-weight:bold;align-self:flex-end;white-space:nowrap;">Hola, {{ current_user.name }}</div>
+                    <a href="{{ url_for('logout') }}" style="color:#1976d2;font-size:0.98rem;text-decoration:underline;margin-top:0.1em;">Cerrar sesión</a>
+                </div>
             </div>
-            <div class="logo-movil">
-                <img src="/static/crediclub_logo.png" alt="Crediclub" class="crediclub-logo" />
+            <div class="logo-movil" style="display:flex;justify-content:center;width:100%;margin-bottom:0.2em !important;">
+                <img src="/static/crediclub_logo.png" alt="Crediclub" class="crediclub-logo" style="max-width:180px !important;height:48px !important;margin-bottom:0.1em !important;" />
             </div>
-            <div class="botones-movil">
-                <a href="{{ url_for('mis_archivos') }}" id="misArchivosBtn">Mis Archivos</a>
-                <a href="{{ url_for('logout') }}" id="cerrarSesionBtn">Cerrar sesión</a>
-            </div>
+            <h1 style="margin-top:0.1em;font-size:2.2rem !important;letter-spacing:-1px;text-align:center;font-weight:800;">AsesorIA</h1>
         </div>
         <!-- CABECERA DESKTOP -->
         <div class="cabecera-desktop" style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5em;">
