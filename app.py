@@ -292,7 +292,6 @@ def empresa():
 @app.route('/cliente_upload', methods=['POST'])
 def cliente_upload():
     try:
-        # Configuración específica para el contenedor de clientes
         azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
         azure_account_key = os.environ.get('AZURE_CLIENTE_ACCOUNT_KEY')
         azure_container_name = os.environ.get('AZURE_CLIENTE_CONTAINER', 'clienteai')
@@ -300,17 +299,16 @@ def cliente_upload():
         blob_service_client = BlobServiceClient.from_connection_string(connect_str)
 
         uploaded = []
-        for field in ['front_video', 'back_video']:
-            file = request.files.get(field)
-            if file:
-                filename = secure_filename(file.filename)
-                blob_name = f"{field}/" + filename
-                with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as tmp:
-                    file.save(tmp.name)
-                    with open(tmp.name, "rb") as data:
-                        blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=blob_name)
-                        blob_client.upload_blob(data, overwrite=True)
-                uploaded.append(blob_name)
+        file = request.files.get('main_video')
+        if file:
+            filename = secure_filename(file.filename)
+            blob_name = filename
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as tmp:
+                file.save(tmp.name)
+                with open(tmp.name, "rb") as data:
+                    blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=blob_name)
+                    blob_client.upload_blob(data, overwrite=True)
+            uploaded.append(blob_name)
         if not uploaded:
             return jsonify({"error": "No se subió ningún video"}), 400
         return jsonify({"success": True, "uploaded": uploaded})

@@ -39,34 +39,49 @@
         }
         .video-grid {
             display: flex;
-            gap: 1.2rem;
             justify-content: center;
             margin-bottom: 1.5rem;
-            flex-wrap: wrap;
-            flex-direction: row;
         }
         .video-block {
             display: flex;
             flex-direction: column;
             align-items: center;
-            flex: 1 1 0;
-            min-width: 180px;
-            max-width: 48%;
+            width: 100%;
+            max-width: 420px;
         }
         video {
             width: 100%;
-            height: 240px;
+            height: 320px;
             background: #e0e0e0;
             border-radius: 10px;
             margin-bottom: 0.5em;
             object-fit: contain;
             object-position: center;
+            transition: transform 0.2s;
+        }
+        .mirrored {
+            transform: scaleX(-1);
         }
         .label {
-            font-size: 1rem;
+            font-size: 1.1rem;
             color: #34495e;
             font-weight: 600;
             margin-bottom: 0.2em;
+        }
+        .switch-btn {
+            background: #3498db;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 0.7em 1.5em;
+            font-size: 1.08rem;
+            font-weight: 600;
+            margin-bottom: 1em;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .switch-btn:hover {
+            background: #217dbb;
         }
         .recording-controls {
             display: flex;
@@ -120,21 +135,13 @@
                 max-width: 180px;
                 height: 48px;
             }
-            .video-grid {
-                flex-direction: row;
-                gap: 0.5rem;
-            }
             .video-block {
-                min-width: 0;
-                max-width: 48vw;
-                flex: 1 1 0;
+                max-width: 98vw;
             }
             video {
-                width: 100%;
-                max-width: 100%;
-                height: 140px;
-                object-fit: contain;
-                object-position: center;
+                width: 100vw;
+                max-width: 98vw;
+                height: 180px;
             }
         }
     </style>
@@ -156,13 +163,10 @@
             3. Recarga la página después de cambiar los permisos.<br>
         </div>
         <div class="video-grid">
-            <div class="video-block" id="frontBlock">
-                <span class="label">Cámara Frontal</span>
-                <video id="frontVideo" autoplay muted playsinline></video>
-            </div>
-            <div class="video-block" id="backBlock">
-                <span class="label">Cámara Trasera</span>
-                <video id="backVideo" autoplay muted playsinline></video>
+            <div class="video-block">
+                <span class="label" id="camLabel">Cámara Frontal</span>
+                <video id="mainVideo" autoplay muted playsinline class="mirrored"></video>
+                <button class="switch-btn" id="switchBtn">Cambiar cámara</button>
             </div>
         </div>
         <div class="recording-controls">
@@ -173,75 +177,87 @@
         </div>
     </div>
     <script>
-        let frontStream, backStream, frontRecorder, backRecorder;
-        let frontChunks = [], backChunks = [];
+        let currentFacing = 'user'; // 'user' (frontal) o 'environment' (trasera)
+        let mainStream, mainRecorder;
+        let mainChunks = [];
         let recording = false;
         let startTime, timerInterval;
         const recordBtn = document.getElementById('recordBtn');
         const timer = document.getElementById('timer');
         const statusMsg = document.getElementById('statusMsg');
+        const mainVideo = document.getElementById('mainVideo');
+        const camLabel = document.getElementById('camLabel');
+        const switchBtn = document.getElementById('switchBtn');
 
-        async function getCameras() {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            return devices.filter(d => d.kind === 'videoinput');
-        }
-
-        async function startStreams() {
-            // 1. Forzar el popup de permisos apenas cargue
+        async function startMainStream(facingMode = 'user') {
+            if (mainStream) mainStream.getTracks().forEach(t => t.stop());
             try {
-                await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            } catch (e) {
-                // Si el usuario niega, no seguimos
-                statusMsg.textContent = 'No se pudo acceder a la cámara. Debes dar permiso.';
-                document.getElementById('permisoAyuda').style.display = 'block';
-                recordBtn.disabled = true;
-                return;
-            }
-            // 2. Continuar con la lógica de cámaras específicas
-            const cameras = await getCameras();
-            let frontId = null, backId = null;
-            cameras.forEach(cam => {
-                if (cam.label.toLowerCase().includes('front')) frontId = cam.deviceId;
-                if (cam.label.toLowerCase().includes('back') || cam.label.toLowerCase().includes('trasera')) backId = cam.deviceId;
-            });
-            // fallback: si solo hay dos, asume el primero es frontal y el segundo trasera
-            if (!frontId && cameras.length >= 1) frontId = cameras[0].deviceId;
-            if (!backId && cameras.length >= 2) backId = cameras[1].deviceId;
-
-            let atLeastOne = false;
-            // Intenta abrir ambas cámaras
-            try {
-                if (frontId) {
-                    frontStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: frontId } }, audio: true });
-                    document.getElementById('frontVideo').srcObject = frontStream;
-                    atLeastOne = true;
+                mainStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode }, audio: true });
+                mainVideo.srcObject = mainStream;
+                if (facingMode === 'user') {
+                    mainVideo.classList.add('mirrored');
+                    camLabel.textContent = 'Cámara Frontal';
                 } else {
-                    document.getElementById('frontBlock').style.display = 'none';
+                    mainVideo.classList.remove('mirrored');
+                    camLabel.textContent = 'Cámara Trasera';
                 }
-            } catch (e) {
-                document.getElementById('frontBlock').style.display = 'none';
-            }
-            try {
-                if (backId) {
-                    backStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: backId } }, audio: !frontStream });
-                    document.getElementById('backVideo').srcObject = backStream;
-                    atLeastOne = true;
-                } else {
-                    document.getElementById('backBlock').style.display = 'none';
-                }
-            } catch (e) {
-                document.getElementById('backBlock').style.display = 'none';
-            }
-            if (!atLeastOne) {
-                statusMsg.textContent = 'No se pudo acceder a ninguna cámara.';
-                recordBtn.disabled = true;
-                document.getElementById('permisoAyuda').style.display = 'block';
-            } else {
                 statusMsg.textContent = '';
                 recordBtn.disabled = false;
-                document.getElementById('permisoAyuda').style.display = 'none';
+            } catch (e) {
+                statusMsg.textContent = 'No se pudo acceder a la cámara.';
+                recordBtn.disabled = true;
             }
         }
+
+        switchBtn.addEventListener('click', () => {
+            currentFacing = currentFacing === 'user' ? 'environment' : 'user';
+            startMainStream(currentFacing);
+        });
+
+        recordBtn.addEventListener('click', async () => {
+            if (!recording) {
+                mainChunks = [];
+                if (mainStream) {
+                    mainRecorder = new MediaRecorder(mainStream, { mimeType: 'video/webm;codecs=vp8,opus' });
+                    mainRecorder.ondataavailable = e => { if (e.data.size > 0) mainChunks.push(e.data); };
+                    mainRecorder.start(1000);
+                }
+                recording = true;
+                recordBtn.classList.add('recording');
+                recordBtn.querySelector('.record-text').textContent = 'Detener Grabación';
+                startTime = Date.now();
+                timerInterval = setInterval(updateTimer, 1000);
+                statusMsg.textContent = '';
+            } else {
+                if (mainRecorder && mainRecorder.state !== 'inactive') mainRecorder.stop();
+                recording = false;
+                recordBtn.classList.remove('recording');
+                recordBtn.querySelector('.record-text').textContent = 'Iniciar Grabación';
+                clearInterval(timerInterval);
+                timer.textContent = '00:00';
+                if (mainStream) mainStream.getTracks().forEach(t => t.stop());
+                statusMsg.textContent = 'Subiendo video...';
+                // Subir video automáticamente
+                const formData = new FormData();
+                if (mainChunks.length > 0) {
+                    const mainBlob = new Blob(mainChunks, { type: 'video/webm' });
+                    formData.append('main_video', mainBlob, 'main_video.webm');
+                }
+                try {
+                    const response = await fetch('/cliente_upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    if (response.ok) {
+                        statusMsg.textContent = '¡Video subido correctamente!';
+                    } else {
+                        statusMsg.textContent = 'Error al subir el video.';
+                    }
+                } catch (e) {
+                    statusMsg.textContent = 'Error al subir el video.';
+                }
+            }
+        });
 
         function updateTimer() {
             const now = Date.now();
@@ -251,70 +267,8 @@
             timer.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         }
 
-        function stopStreams() {
-            if (frontStream) frontStream.getTracks().forEach(t => t.stop());
-            if (backStream) backStream.getTracks().forEach(t => t.stop());
-        }
-
-        recordBtn.addEventListener('click', async () => {
-            if (!recording) {
-                // Iniciar grabación
-                frontChunks = [];
-                backChunks = [];
-                if (frontStream) {
-                    frontRecorder = new MediaRecorder(frontStream, { mimeType: 'video/webm;codecs=vp8,opus' });
-                    frontRecorder.ondataavailable = e => { if (e.data.size > 0) frontChunks.push(e.data); };
-                    frontRecorder.start(1000);
-                }
-                if (backStream) {
-                    backRecorder = new MediaRecorder(backStream, { mimeType: 'video/webm;codecs=vp8,opus' });
-                    backRecorder.ondataavailable = e => { if (e.data.size > 0) backChunks.push(e.data); };
-                    backRecorder.start(1000);
-                }
-                recording = true;
-                recordBtn.classList.add('recording');
-                recordBtn.querySelector('.record-text').textContent = 'Detener Grabación';
-                startTime = Date.now();
-                timerInterval = setInterval(updateTimer, 1000);
-                statusMsg.textContent = '';
-            } else {
-                // Detener grabación
-                if (frontRecorder && frontRecorder.state !== 'inactive') frontRecorder.stop();
-                if (backRecorder && backRecorder.state !== 'inactive') backRecorder.stop();
-                recording = false;
-                recordBtn.classList.remove('recording');
-                recordBtn.querySelector('.record-text').textContent = 'Iniciar Grabación';
-                clearInterval(timerInterval);
-                timer.textContent = '00:00';
-                stopStreams();
-                statusMsg.textContent = 'Subiendo videos...';
-                // Subir videos automáticamente
-                const formData = new FormData();
-                if (frontChunks.length > 0) {
-                    const frontBlob = new Blob(frontChunks, { type: 'video/webm' });
-                    formData.append('front_video', frontBlob, 'front_video.webm');
-                }
-                if (backChunks.length > 0) {
-                    const backBlob = new Blob(backChunks, { type: 'video/webm' });
-                    formData.append('back_video', backBlob, 'back_video.webm');
-                }
-                try {
-                    const response = await fetch('/cliente_upload', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    if (response.ok) {
-                        statusMsg.textContent = '¡Videos subidos correctamente!';
-                    } else {
-                        statusMsg.textContent = 'Error al subir los videos.';
-                    }
-                } catch (e) {
-                    statusMsg.textContent = 'Error al subir los videos.';
-                }
-            }
-        });
-
-        window.addEventListener('DOMContentLoaded', startStreams);
+        window.addEventListener('DOMContentLoaded', () => startMainStream(currentFacing));
     </script>
 </body>
+</html> 
 </html> 
