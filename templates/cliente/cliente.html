@@ -175,6 +175,17 @@
         }
 
         async function startStreams() {
+            // 1. Forzar el popup de permisos apenas cargue
+            try {
+                await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            } catch (e) {
+                // Si el usuario niega, no seguimos
+                statusMsg.textContent = 'No se pudo acceder a la cámara. Debes dar permiso.';
+                document.getElementById('permisoAyuda').style.display = 'block';
+                recordBtn.disabled = true;
+                return;
+            }
+            // 2. Continuar con la lógica de cámaras específicas
             const cameras = await getCameras();
             let frontId = null, backId = null;
             cameras.forEach(cam => {
