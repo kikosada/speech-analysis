@@ -134,6 +134,15 @@
         </div>
         <h1>AsesorIA</h1>
         <div class="status" id="statusMsg"></div>
+        <div id="permisoAyuda" style="display:none;color:#e74c3c;text-align:center;font-size:1.05rem;margin-bottom:1em;max-width:400px;margin:auto;">
+            <b>¿Problemas para acceder a la cámara?</b><br>
+            1. Asegúrate de dar permiso cuando el navegador lo pida.<br>
+            2. Si no ves el popup, revisa los permisos de la app:<br>
+            <b>iPhone/Safari:</b> Ajustes &gt; Safari &gt; Cámara &gt; Permitir<br>
+            <b>iPhone/Chrome:</b> Ajustes &gt; Chrome &gt; Cámara &gt; Permitir<br>
+            <b>Android/Chrome:</b> Ajustes &gt; Apps &gt; Chrome &gt; Permisos &gt; Cámara &gt; Permitir<br>
+            3. Recarga la página después de cambiar los permisos.<br>
+        </div>
         <div class="video-grid">
             <div class="video-block" id="frontBlock">
                 <span class="label">Cámara Frontal</span>
@@ -203,9 +212,11 @@
             if (!atLeastOne) {
                 statusMsg.textContent = 'No se pudo acceder a ninguna cámara.';
                 recordBtn.disabled = true;
+                document.getElementById('permisoAyuda').style.display = 'block';
             } else {
                 statusMsg.textContent = '';
                 recordBtn.disabled = false;
+                document.getElementById('permisoAyuda').style.display = 'none';
             }
         }
 
