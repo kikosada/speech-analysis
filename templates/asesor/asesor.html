@@ -743,14 +743,9 @@
                 };
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 preview.srcObject = stream;
-                // Aplica espejo solo si es cámara frontal
-                if (facingMode === 'user') {
-                    preview.classList.add('mirror');
-                    preview.classList.remove('no-mirror');
-                } else {
-                    preview.classList.remove('mirror');
-                    preview.classList.add('no-mirror');
-                }
+                // Sin espejo para ambas cámaras
+                preview.classList.remove('mirror');
+                preview.classList.add('no-mirror');
                 document.getElementById('camera-waiting').style.display = 'none';
 
                 mediaRecorder = new MediaRecorder(stream, {
