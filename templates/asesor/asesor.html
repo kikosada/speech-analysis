@@ -784,6 +784,15 @@
                 };
 
                 recordBtn.addEventListener('click', toggleRecording);
+
+                // Aplica espejo solo si es cámara trasera
+                if (facingMode === 'environment') {
+                    preview.classList.add('mirror');
+                    preview.classList.remove('no-mirror');
+                } else {
+                    preview.classList.remove('mirror');
+                    preview.classList.add('no-mirror');
+                }
             } catch (err) {
                 console.error('Error accediendo a cámara/micrófono:', err);
                 alert('No se pudo acceder al micrófono o la cámara. Por favor, asegúrate de dar los permisos necesarios.');
