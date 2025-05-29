@@ -176,11 +176,13 @@
             if (!frontId && cameras.length >= 1) frontId = cameras[0].deviceId;
             if (!backId && cameras.length >= 2) backId = cameras[1].deviceId;
 
+            let atLeastOne = false;
             // Intenta abrir ambas cámaras
             try {
                 if (frontId) {
                     frontStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: frontId } }, audio: true });
                     document.getElementById('frontVideo').srcObject = frontStream;
+                    atLeastOne = true;
                 } else {
                     document.getElementById('frontBlock').style.display = 'none';
                 }
@@ -189,17 +191,21 @@
             }
             try {
                 if (backId) {
-                    backStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: backId } }, audio: false });
+                    backStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: backId } }, audio: !frontStream });
                     document.getElementById('backVideo').srcObject = backStream;
+                    atLeastOne = true;
                 } else {
                     document.getElementById('backBlock').style.display = 'none';
                 }
             } catch (e) {
                 document.getElementById('backBlock').style.display = 'none';
             }
-            if (!frontStream && !backStream) {
+            if (!atLeastOne) {
                 statusMsg.textContent = 'No se pudo acceder a ninguna cámara.';
                 recordBtn.disabled = true;
+            } else {
+                statusMsg.textContent = '';
+                recordBtn.disabled = false;
             }
         }
 
