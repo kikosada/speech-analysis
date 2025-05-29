@@ -160,7 +160,7 @@ def asesor():
 
 @app.route('/cliente')
 def cliente():
-    return render_template('cliente.html')
+    return render_template('cliente/cliente.html')
 
 def upload_file_to_azure(file_path, blob_name):
     account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
