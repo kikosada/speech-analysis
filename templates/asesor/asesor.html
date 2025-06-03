@@ -785,11 +785,10 @@
 
                 recordBtn.addEventListener('click', toggleRecording);
 
-                // Fuerza el estilo inline para evitar herencias de clase
+                // Igual que en /cliente: solo frontal lleva 'mirrored', trasera sin clase
+                preview.classList.remove('mirrored');
                 if (facingMode === 'user') {
-                    preview.style.transform = 'scaleX(-1)';
-                } else {
-                    preview.style.transform = 'scaleX(1)';
+                    preview.classList.add('mirrored');
                 }
             } catch (err) {
                 console.error('Error accediendo a cámara/micrófono:', err);
