@@ -144,6 +144,14 @@
                 height: 98vw;
                 max-height: 98vw;
             }
+            input[type="text"], input[type="number"] {
+                width: 92vw !important;
+                max-width: 400px;
+            }
+            textarea {
+                width: 92vw !important;
+                max-width: 400px;
+            }
         }
     </style>
 </head>
@@ -210,6 +218,9 @@
         for(let i=0;i<steps.length;i++){
             bar.innerHTML += `<div style="width:32px;height:8px;border-radius:4px;margin:0 2px;background:${i<=idx?'#3498db':'#b3c6e0'};"></div>`;
         }
+        // Inicializar cámara solo cuando se entra al paso correspondiente
+        if(idx === 1) startMainStream1();
+        if(idx === 2) startMainStream2();
     }
     showStep(0);
     // Navegación entre pasos
@@ -363,7 +374,7 @@
         }
     });
     // Inicializar primer paso al cargar
-    window.addEventListener('DOMContentLoaded', () => startMainStream1());
+    window.addEventListener('DOMContentLoaded', () => showStep(0));
     </script>
 </body>
 </html> 
