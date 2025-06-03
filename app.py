@@ -159,6 +159,7 @@ def asesor():
     return render_template('asesor.html')
 
 @app.route('/cliente')
+@login_required
 def cliente():
     return render_template('cliente/cliente.html')
 
@@ -290,6 +291,7 @@ def empresa():
     return render_template('empresa.html')
 
 @app.route('/cliente_upload', methods=['POST'])
+@login_required
 def cliente_upload():
     try:
         azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
@@ -298,16 +300,14 @@ def cliente_upload():
         connect_str = f"DefaultEndpointsProtocol=https;AccountName={azure_account_name};AccountKey={azure_account_key};EndpointSuffix=core.windows.net"
         blob_service_client = BlobServiceClient.from_connection_string(connect_str)
 
-        # Obtener el email del usuario de la sesión, o usar 'default' si no existe
-        user_email = session.get('user_email', 'default')
-        # Crear un prefijo de carpeta con el email
+        # Obtener el email del usuario autenticado
+        user_email = getattr(current_user, 'email', None) or session.get('email', 'default')
         folder_prefix = f"{user_email}/"
 
         uploaded = []
         file = request.files.get('main_video')
         if file:
             filename = secure_filename(file.filename)
-            # Usar el prefijo de carpeta en el blob_name
             blob_name = folder_prefix + filename
             with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as tmp:
                 file.save(tmp.name)
