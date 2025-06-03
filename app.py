@@ -18,6 +18,8 @@ import uuid
 import unicodedata
 from azure_transcriber import AzureTranscriber
 import subprocess
+from flask_session import Session
+import redis
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "supersecret")
@@ -320,6 +322,10 @@ def cliente_upload():
         return jsonify({"success": True, "uploaded": uploaded})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+app.config['SESSION_TYPE'] = 'redis'
+app.config['SESSION_REDIS'] = redis.from_url(os.environ.get('REDIS_URL'))
+Session(app)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
