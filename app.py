@@ -298,11 +298,17 @@ def cliente_upload():
         connect_str = f"DefaultEndpointsProtocol=https;AccountName={azure_account_name};AccountKey={azure_account_key};EndpointSuffix=core.windows.net"
         blob_service_client = BlobServiceClient.from_connection_string(connect_str)
 
+        # Obtener el email del usuario de la sesión, o usar 'default' si no existe
+        user_email = session.get('user_email', 'default')
+        # Crear un prefijo de carpeta con el email
+        folder_prefix = f"{user_email}/"
+
         uploaded = []
         file = request.files.get('main_video')
         if file:
             filename = secure_filename(file.filename)
-            blob_name = filename
+            # Usar el prefijo de carpeta en el blob_name
+            blob_name = folder_prefix + filename
             with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as tmp:
                 file.save(tmp.name)
                 with open(tmp.name, "rb") as data:
