@@ -785,8 +785,8 @@
 
                 recordBtn.addEventListener('click', toggleRecording);
 
-                // Aplica espejo solo si es cámara trasera
-                if (facingMode === 'environment') {
+                // Lógica estándar: espejo solo en frontal
+                if (facingMode === 'user') {
                     preview.classList.add('mirror');
                     preview.classList.remove('no-mirror');
                 } else {
