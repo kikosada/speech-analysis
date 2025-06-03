@@ -785,9 +785,12 @@
 
                 recordBtn.addEventListener('click', toggleRecording);
 
-                // Sin espejo para ambas cámaras (igual que en /cliente)
+                // Solo la frontal lleva espejo, la trasera sin clase
                 preview.classList.remove('mirror');
-                preview.classList.add('no-mirror');
+                preview.classList.remove('no-mirror');
+                if (facingMode === 'user') {
+                    preview.classList.add('mirror');
+                }
             } catch (err) {
                 console.error('Error accediendo a cámara/micrófono:', err);
                 alert('No se pudo acceder al micrófono o la cámara. Por favor, asegúrate de dar los permisos necesarios.');
