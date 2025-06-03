@@ -785,8 +785,8 @@
 
                 recordBtn.addEventListener('click', toggleRecording);
 
-                // Lógica estándar: espejo solo en frontal
-                if (facingMode === 'user') {
+                // Espejo solo en trasera
+                if (facingMode === 'environment') {
                     preview.classList.add('mirror');
                     preview.classList.remove('no-mirror');
                 } else {
