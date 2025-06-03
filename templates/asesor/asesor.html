@@ -785,11 +785,11 @@
 
                 recordBtn.addEventListener('click', toggleRecording);
 
-                // Solo la frontal lleva espejo, la trasera sin clase
-                preview.classList.remove('mirror');
-                preview.classList.remove('no-mirror');
+                // Fuerza el estilo inline para evitar herencias de clase
                 if (facingMode === 'user') {
-                    preview.classList.add('mirror');
+                    preview.style.transform = 'scaleX(-1)';
+                } else {
+                    preview.style.transform = 'scaleX(1)';
                 }
             } catch (err) {
                 console.error('Error accediendo a cámara/micrófono:', err);
