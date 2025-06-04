@@ -321,6 +321,30 @@ def cliente_upload():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/cliente_datos', methods=['POST'])
+@login_required
+def cliente_datos():
+    try:
+        azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
+        azure_account_key = os.environ.get('AZURE_CLIENTE_ACCOUNT_KEY')
+        azure_container_name = os.environ.get('AZURE_CLIENTE_CONTAINER', 'clienteai')
+        connect_str = f"DefaultEndpointsProtocol=https;AccountName={azure_account_name};AccountKey={azure_account_key};EndpointSuffix=core.windows.net"
+        blob_service_client = BlobServiceClient.from_connection_string(connect_str)
+
+        user_email = getattr(current_user, 'email', None) or session.get('email', 'default')
+        folder_prefix = f"{user_email}/"
+        blob_name = folder_prefix + 'datos.json'
+
+        datos = request.get_json()
+        import json
+        from io import BytesIO
+        datos_bytes = BytesIO(json.dumps(datos, ensure_ascii=False, indent=2).encode('utf-8'))
+        blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=blob_name)
+        blob_client.upload_blob(datos_bytes, overwrite=True)
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     # Configuración para permitir archivos grandes y tiempos de espera más largos

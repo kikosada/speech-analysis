@@ -232,10 +232,32 @@
         if(document.getElementById('giroEmpresa').value.trim() && document.getElementById('numEmpleados').value>0) showStep(4);
         else alert('Por favor describe el giro de tu empresa y el número de empleados.');
     };
-    document.getElementById('finishBtn').onclick = ()=>{
+    document.getElementById('finishBtn').onclick = async ()=>{
         if(document.getElementById('objetivoCrediclub').value.trim()){
-            showStep(5);
-            document.getElementById('finalMsg').style.display = 'block';
+            // Recolectar todos los datos
+            const datos = {
+                nombreCompleto: document.getElementById('nombreCompleto').value.trim(),
+                nombreEmpresa: document.getElementById('nombreEmpresa').value.trim(),
+                giroEmpresa: document.getElementById('giroEmpresa').value.trim(),
+                numEmpleados: document.getElementById('numEmpleados').value,
+                objetivoCrediclub: document.getElementById('objetivoCrediclub').value.trim()
+            };
+            // Enviar al backend
+            try {
+                const response = await fetch('/cliente_datos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(datos)
+                });
+                if (response.ok) {
+                    showStep(5);
+                    document.getElementById('finalMsg').style.display = 'block';
+                } else {
+                    alert('Error al guardar los datos.');
+                }
+            } catch (e) {
+                alert('Error al guardar los datos.');
+            }
         }else{
             alert('Por favor describe tu objetivo.');
         }
