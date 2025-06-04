@@ -315,6 +315,28 @@ def cliente_upload():
                     blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=blob_name)
                     blob_client.upload_blob(data, overwrite=True)
             uploaded.append(blob_name)
+            # Si es presentacion.webm, transcribe y guarda como .txt
+            if filename == 'presentacion.webm':
+                try:
+                    # Extraer audio a wav
+                    audio_wav = tmp.name + '.wav'
+                    subprocess.run([
+                        'ffmpeg', '-y', '-i', tmp.name, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
+                    ], check=True)
+                    transcriber = AzureTranscriber(
+                        speech_key=os.environ.get('AZURE_SPEECH_KEY'),
+                        service_region=os.environ.get('AZURE_SPEECH_REGION', 'eastus')
+                    )
+                    result = transcriber.transcribe(audio_wav)
+                    transcript = result['text'] if isinstance(result, dict) and 'text' in result else str(result)
+                    # Guardar la transcripción como .txt
+                    from io import BytesIO
+                    transcript_bytes = BytesIO(transcript.encode('utf-8'))
+                    transcript_blob = folder_prefix + 'presentacion.txt'
+                    blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=transcript_blob)
+                    blob_client.upload_blob(transcript_bytes, overwrite=True)
+                except Exception as e:
+                    logger.error(f"Error transcribiendo presentacion.webm: {e}")
         if not uploaded:
             return jsonify({"error": "No se subió ningún video"}), 400
         return jsonify({"success": True, "uploaded": uploaded})
