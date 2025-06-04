@@ -329,12 +329,26 @@ def cliente_upload():
                     )
                     result = transcriber.transcribe(audio_wav)
                     transcript = result['text'] if isinstance(result, dict) and 'text' in result else str(result)
+                    # Calificación automática simple (puedes mejorar la rúbrica después)
+                    score = 1
+                    texto = transcript.lower()
+                    if any(pal in texto for pal in ['empresa', 'negocio', 'compañía']): score += 2
+                    if any(pal in texto for pal in ['servicio', 'producto', 'ofrecemos', 'vendemos']): score += 2
+                    if any(pal in texto for pal in ['mision', 'visión', 'valores']): score += 2
+                    if len(transcript.split()) > 30: score += 2
+                    if score > 10: score = 10
                     # Guardar la transcripción como .txt
                     from io import BytesIO
                     transcript_bytes = BytesIO(transcript.encode('utf-8'))
                     transcript_blob = folder_prefix + 'presentacion.txt'
                     blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=transcript_blob)
                     blob_client.upload_blob(transcript_bytes, overwrite=True)
+                    # Guardar score y transcripción como .json
+                    import json
+                    presentacion_json = BytesIO(json.dumps({"score": score, "transcripcion": transcript}, ensure_ascii=False, indent=2).encode('utf-8'))
+                    presentacion_json_blob = folder_prefix + 'presentacion.json'
+                    blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=presentacion_json_blob)
+                    blob_client.upload_blob(presentacion_json, overwrite=True)
                 except Exception as e:
                     logger.error(f"Error transcribiendo presentacion.webm: {e}")
         if not uploaded:
