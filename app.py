@@ -260,8 +260,10 @@ def analyze():
         from io import BytesIO
         presentacion_json = BytesIO(json.dumps({"score": score, "transcripcion": transcript}, ensure_ascii=False, indent=2).encode('utf-8'))
         presentacion_json_blob = folder_prefix + 'presentacion.json'
+        print(f"Intentando guardar {presentacion_json_blob} en Azure para {folder_prefix}")
         blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=presentacion_json_blob)
         blob_client.upload_blob(presentacion_json, overwrite=True)
+        print(f"¡Guardado exitoso de {presentacion_json_blob} en Azure para {folder_prefix}")
 
         # Analizar el video (aquí va tu lógica de análisis)
         # Por ahora, devolvemos un resultado de ejemplo
@@ -489,8 +491,10 @@ def api_cliente_upload():
         from io import BytesIO
         presentacion_json = BytesIO(json.dumps({"score": score, "transcripcion": transcript}, ensure_ascii=False, indent=2).encode('utf-8'))
         presentacion_json_blob = folder_prefix + 'presentacion.json'
+        print(f"Intentando guardar {presentacion_json_blob} en Azure para {folder_prefix}")
         blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=presentacion_json_blob)
         blob_client.upload_blob(presentacion_json, overwrite=True)
+        print(f"¡Guardado exitoso de {presentacion_json_blob} en Azure para {folder_prefix}")
 
         # Analizar el video (aquí va tu lógica de análisis)
         # Por ahora, devolvemos un resultado de ejemplo
