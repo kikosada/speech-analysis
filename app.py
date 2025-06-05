@@ -432,6 +432,12 @@ def cliente_datos():
 # --- API para /cliente ---
 @app.route('/api/cliente/upload', methods=['POST'])
 def api_cliente_upload():
+    from azure.storage.blob import BlobServiceClient
+    azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
+    azure_account_key = os.environ.get('AZURE_CLIENTE_ACCOUNT_KEY')
+    azure_container_name = os.environ.get('AZURE_CLIENTE_CONTAINER', 'clienteai')
+    connect_str = f"DefaultEndpointsProtocol=https;AccountName={azure_account_name};AccountKey={azure_account_key};EndpointSuffix=core.windows.net"
+    blob_service_client = BlobServiceClient.from_connection_string(connect_str)
     # Verificar API key
     api_key = request.headers.get('X-API-Key')
     if not api_key or api_key != os.environ.get('API_KEY'):
@@ -515,6 +521,12 @@ def api_cliente_upload():
 
 @app.route('/api/cliente/analysis/<email>', methods=['GET'])
 def api_cliente_analysis(email):
+    from azure.storage.blob import BlobServiceClient
+    azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
+    azure_account_key = os.environ.get('AZURE_CLIENTE_ACCOUNT_KEY')
+    azure_container_name = os.environ.get('AZURE_CLIENTE_CONTAINER', 'clienteai')
+    connect_str = f"DefaultEndpointsProtocol=https;AccountName={azure_account_name};AccountKey={azure_account_key};EndpointSuffix=core.windows.net"
+    blob_service_client = BlobServiceClient.from_connection_string(connect_str)
     # Verificar API key
     api_key = request.headers.get('X-API-Key')
     if not api_key or api_key != os.environ.get('API_KEY'):
