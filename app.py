@@ -429,6 +429,111 @@ def cliente_datos():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# --- API para /cliente ---
+@app.route('/api/cliente/upload', methods=['POST'])
+def api_cliente_upload():
+    # Verificar API key
+    api_key = request.headers.get('X-API-Key')
+    if not api_key or api_key != os.environ.get('API_KEY'):
+        return jsonify({'error': 'API key inválida'}), 401
+
+    if 'file' not in request.files:
+        return jsonify({'error': 'No se envió ningún archivo'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No se seleccionó ningún archivo'}), 400
+    if not file:
+        return jsonify({'error': 'Archivo inválido'}), 400
+
+    # Crear carpeta para el usuario si no existe
+    folder_prefix = f"{request.form.get('email', 'default')}/"
+    try:
+        # Guardar el archivo en Azure Blob Storage
+        filename = secure_filename(file.filename)
+        blob_name = folder_prefix + filename
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as tmp:
+            file.save(tmp.name)
+            with open(tmp.name, "rb") as data:
+                blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=blob_name)
+                blob_client.upload_blob(data, overwrite=True)
+
+        # Transcribir el video
+        audio_wav = tmp.name + '.wav'
+        subprocess.run([
+            'ffmpeg', '-y', '-i', tmp.name, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
+        ], check=True)
+        transcriber = AzureTranscriber(
+            speech_key=os.environ.get('AZURE_SPEECH_KEY'),
+            service_region=os.environ.get('AZURE_SPEECH_REGION', 'eastus')
+        )
+        result = transcriber.transcribe(audio_wav)
+        transcript = result['text'] if isinstance(result, dict) and 'text' in result else str(result)
+
+        # Calificación automática simple (puedes mejorar la rúbrica después)
+        score = 1
+        texto = transcript.lower()
+        if any(pal in texto for pal in ['empresa', 'negocio', 'compañía']): score += 2
+        if any(pal in texto for pal in ['servicio', 'producto', 'ofrecemos', 'vendemos']): score += 2
+        if any(pal in texto for pal in ['mision', 'visión', 'valores']): score += 2
+        if len(transcript.split()) > 30: score += 2
+        if score > 10: score = 10
+
+        # Guardar transcripción y score como JSON
+        import json
+        from io import BytesIO
+        presentacion_json = BytesIO(json.dumps({"score": score, "transcripcion": transcript}, ensure_ascii=False, indent=2).encode('utf-8'))
+        presentacion_json_blob = folder_prefix + 'presentacion.json'
+        blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=presentacion_json_blob)
+        blob_client.upload_blob(presentacion_json, overwrite=True)
+
+        # Analizar el video (aquí va tu lógica de análisis)
+        # Por ahora, devolvemos un resultado de ejemplo
+        return jsonify({
+            'text': transcript,
+            'scores': {
+                'historia': 8,
+                'mision_vision': 7,
+                'productos': 9,
+                'valores': 8,
+                'mercado': 7,
+                'logros': 8,
+                'overall': 8
+            },
+            'feedback': [
+                'Mencionaste el nombre de la empresa.',
+                'Explicaste a qué se dedica.',
+                'Hablaste de productos/servicios.',
+                'Mencionaste misión, visión o valores.',
+                'Hablaste de logros o historia.',
+                'Duración adecuada.'
+            ],
+            'duration': 120
+        })
+    except Exception as e:
+        logger.error(f"Error en /api/cliente/upload: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/cliente/analysis/<email>', methods=['GET'])
+def api_cliente_analysis(email):
+    # Verificar API key
+    api_key = request.headers.get('X-API-Key')
+    if not api_key or api_key != os.environ.get('API_KEY'):
+        return jsonify({'error': 'API key inválida'}), 401
+
+    try:
+        # Leer el archivo presentacion.json de Azure
+        folder_prefix = f"{email}/"
+        presentacion_json_blob = folder_prefix + 'presentacion.json'
+        blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=presentacion_json_blob)
+        try:
+            presentacion_json = blob_client.download_blob().readall()
+            return jsonify(json.loads(presentacion_json))
+        except Exception as e:
+            return jsonify({'error': 'No se encontró el análisis para este email'}), 404
+    except Exception as e:
+        logger.error(f"Error en /api/cliente/analysis/{email}: {e}")
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     # Configuración para permitir archivos grandes y tiempos de espera más largos
