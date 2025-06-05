@@ -534,6 +534,9 @@ def api_cliente_analysis(email):
         logger.error(f"Error en /api/cliente/analysis/{email}: {e}")
         return jsonify({'error': str(e)}), 500
 
+# Configurar API_KEY en Render
+os.environ['API_KEY'] = 'la_clave_secreta_de_kiko'
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     # Configuración para permitir archivos grandes y tiempos de espera más largos
