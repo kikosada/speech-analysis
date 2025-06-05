@@ -213,34 +213,82 @@ def normaliza_empresa(nombre):
 
 @app.route('/analyze', methods=['POST'])
 @login_required
-def analyze_audio():
+def analyze():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No se envió ningún archivo'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No se seleccionó ningún archivo'}), 400
+    if not file:
+        return jsonify({'error': 'Archivo inválido'}), 400
+
+    # Crear carpeta para el usuario si no existe
+    folder_prefix = f"{current_user.email}/"
     try:
-        if 'file' not in request.files:
-            return jsonify({"error": "No se ha subido ningún archivo"}), 400
-        file = request.files['file']
-        if file.filename == '':
-            return jsonify({"error": "No se ha seleccionado ningún archivo"}), 400
+        # Guardar el archivo en Azure Blob Storage
         filename = secure_filename(file.filename)
-        ext = os.path.splitext(filename)[1].lower()
-        with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
+        blob_name = folder_prefix + filename
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as tmp:
             file.save(tmp.name)
-            audio_path = tmp.name
-        # Si es video, extraer audio a wav
-        if ext in ['.mp4', '.webm', '.mov', '.mkv']:
-            audio_wav = audio_path + '.wav'
-            subprocess.run([
-                'ffmpeg', '-y', '-i', audio_path, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
-            ], check=True)
-            audio_path = audio_wav
+            with open(tmp.name, "rb") as data:
+                blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=blob_name)
+                blob_client.upload_blob(data, overwrite=True)
+
+        # Transcribir el video
+        audio_wav = tmp.name + '.wav'
+        subprocess.run([
+            'ffmpeg', '-y', '-i', tmp.name, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
+        ], check=True)
         transcriber = AzureTranscriber(
-            speech_key="8sTDtUGB6YcaENbMygEAbBx8KFb9JWJJqH21QvkeYT979zp6gBxUJQQJ99BEACYeBjFXJ3w3AAAYACOGdl81",
-            service_region="eastus"
+            speech_key=os.environ.get('AZURE_SPEECH_KEY'),
+            service_region=os.environ.get('AZURE_SPEECH_REGION', 'eastus')
         )
-        result = transcriber.transcribe(audio_path)
-        return jsonify(result)
+        result = transcriber.transcribe(audio_wav)
+        transcript = result['text'] if isinstance(result, dict) and 'text' in result else str(result)
+
+        # Calificación automática simple (puedes mejorar la rúbrica después)
+        score = 1
+        texto = transcript.lower()
+        if any(pal in texto for pal in ['empresa', 'negocio', 'compañía']): score += 2
+        if any(pal in texto for pal in ['servicio', 'producto', 'ofrecemos', 'vendemos']): score += 2
+        if any(pal in texto for pal in ['mision', 'visión', 'valores']): score += 2
+        if len(transcript.split()) > 30: score += 2
+        if score > 10: score = 10
+
+        # Guardar transcripción y score como JSON
+        import json
+        from io import BytesIO
+        presentacion_json = BytesIO(json.dumps({"score": score, "transcripcion": transcript}, ensure_ascii=False, indent=2).encode('utf-8'))
+        presentacion_json_blob = folder_prefix + 'presentacion.json'
+        blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=presentacion_json_blob)
+        blob_client.upload_blob(presentacion_json, overwrite=True)
+
+        # Analizar el video (aquí va tu lógica de análisis)
+        # Por ahora, devolvemos un resultado de ejemplo
+        return jsonify({
+            'text': transcript,
+            'scores': {
+                'historia': 8,
+                'mision_vision': 7,
+                'productos': 9,
+                'valores': 8,
+                'mercado': 7,
+                'logros': 8,
+                'overall': 8
+            },
+            'feedback': [
+                'Mencionaste el nombre de la empresa.',
+                'Explicaste a qué se dedica.',
+                'Hablaste de productos/servicios.',
+                'Mencionaste misión, visión o valores.',
+                'Hablaste de logros o historia.',
+                'Duración adecuada.'
+            ],
+            'duration': 120
+        })
     except Exception as e:
-        logger.error(f"Error inesperado: {str(e)}")
-        return jsonify({"error": "Ha ocurrido un error inesperado"}), 500
+        logger.error(f"Error en /analyze: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.context_processor
 def inject_user():
