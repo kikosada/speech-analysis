@@ -545,7 +545,19 @@ def api_cliente_analysis(email):
         try:
             presentacion_json = blob_client.download_blob().readall()
             print("Contenido recibido del blob:", presentacion_json)
-            return jsonify(json.loads(presentacion_json.decode("utf-8")))
+            presentacion_data = json.loads(presentacion_json.decode("utf-8"))
+            # Leer datos.json
+            datos_blob_name = folder_prefix + 'datos.json'
+            datos_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=datos_blob_name)
+            try:
+                datos_json = datos_blob_client.download_blob().readall()
+                datos_data = json.loads(datos_json.decode("utf-8"))
+            except Exception as e:
+                print("No se encontró datos.json o error al leerlo:", e)
+                datos_data = None
+            # Combinar y devolver
+            presentacion_data['datos'] = datos_data
+            return jsonify(presentacion_data)
         except Exception as e:
             print("Error al decodificar o cargar el JSON:", e)
             return jsonify({'error': 'No se encontró el análisis para este email'}), 404
