@@ -546,6 +546,7 @@ def api_cliente_analysis(email):
             print("Contenido recibido del blob:", presentacion_json)
             return jsonify(json.loads(presentacion_json.decode("utf-8")))
         except Exception as e:
+            print("Error al decodificar o cargar el JSON:", e)
             return jsonify({'error': 'No se encontró el análisis para este email'}), 404
     except Exception as e:
         logger.error(f"Error en /api/cliente/analysis/{email}: {e}")
