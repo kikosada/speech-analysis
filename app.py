@@ -526,6 +526,7 @@ def api_cliente_upload():
 @app.route('/api/cliente/analysis/<email>', methods=['GET'])
 def api_cliente_analysis(email):
     from azure.storage.blob import BlobServiceClient
+    print(f"Intentando leer {presentacion_json_blob} del contenedor {azure_container_name}")
     azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
     azure_account_key = os.environ.get('AZURE_CLIENTE_ACCOUNT_KEY')
     azure_container_name = os.environ.get('AZURE_CLIENTE_CONTAINER', 'clienteai')
