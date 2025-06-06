@@ -541,6 +541,7 @@ def api_cliente_analysis(email):
         # Leer el archivo presentacion.json de Azure
         folder_prefix = f"{email}/"
         presentacion_json_blob = folder_prefix + 'presentacion.json'
+        print(f"Intentando leer {presentacion_json_blob} del contenedor {azure_container_name}")
         blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=presentacion_json_blob)
         try:
             presentacion_json = blob_client.download_blob().readall()
