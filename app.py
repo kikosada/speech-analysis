@@ -538,7 +538,6 @@ def api_cliente_analysis(email):
         return jsonify({'error': 'API key inválida'}), 401
 
     try:
-        # Leer el archivo presentacion.json de Azure
         folder_prefix = f"{email}/"
         presentacion_json_blob = folder_prefix + 'presentacion.json'
         print(f"Intentando leer {presentacion_json_blob} del contenedor {azure_container_name}")
