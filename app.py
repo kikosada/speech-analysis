@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, request, render_template, redirect, url_for, session, send_from_directory
 import os
-from transcribe import AssemblyAITranscriber as Transcriber
+    from transcribe import AssemblyAITranscriber as Transcriber
 from werkzeug.utils import secure_filename
 import logging
 from authlib.integrations.flask_client import OAuth
@@ -543,6 +543,7 @@ def api_cliente_analysis(email):
         blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=presentacion_json_blob)
         try:
             presentacion_json = blob_client.download_blob().readall()
+            print("Contenido recibido del blob:", presentacion_json)
             return jsonify(json.loads(presentacion_json))
         except Exception as e:
             return jsonify({'error': 'No se encontró el análisis para este email'}), 404
