@@ -3,7 +3,7 @@ services:
     name: asesoria-app
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: cd src && PYTHONPATH=$PYTHONPATH:. gunicorn app.app:app --config gunicorn.conf.py
+    startCommand: cd src && export PYTHONPATH=$PYTHONPATH:$(pwd) && gunicorn app.app:app --config gunicorn.conf.py
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.11
