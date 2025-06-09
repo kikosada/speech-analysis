@@ -168,6 +168,8 @@ def index():
 
 @app.route('/login-asesor')
 def login_asesor_page():
+    if current_user.is_authenticated and session.get('tipo_login') == 'cliente':
+        return redirect(url_for('cliente'))
     return render_template('login_asesor.html')
 
 @app.route('/login-cliente')
@@ -348,6 +350,8 @@ def descargar_archivo(empresa, filename):
 @app.route('/asesor')
 @login_required
 def asesor():
+    if session.get('tipo_login') == 'cliente':
+        return redirect(url_for('cliente'))
     if not session.get('empresa'):
         return redirect(url_for('empresa'))
     return render_template('asesor.html')
