@@ -1,27 +1,25 @@
 services:
   - type: web
-    name: analizador-presentaciones
+    name: verano
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: cd src && gunicorn wsgi:app --config gunicorn.conf.py
+    startCommand: gunicorn wsgi:app
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.11
+        value: 3.11.0
       - key: SECRET_KEY
+        sync: false
+      - key: AZURE_STORAGE_CONNECTION_STRING
+        sync: false
+      - key: AZURE_CONTAINER_NAME
         sync: false
       - key: GOOGLE_CLIENT_ID
         sync: false
+      - key: GOOGLE_PROJECT_ID
+        sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
-      - key: AZURE_STORAGE_ACCOUNT_NAME
-        sync: false
-      - key: AZURE_STORAGE_ACCOUNT_KEY
-        sync: false
-      - key: AZURE_SPEECH_KEY
-        sync: false
-      - key: AZURE_SPEECH_REGION
-        sync: false
-      - key: AZURE_CONTAINER_NAME
+      - key: GOOGLE_REDIRECT_URI
         sync: false
     healthCheckPath: /health
     autoDeploy: true

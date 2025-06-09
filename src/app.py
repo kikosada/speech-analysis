@@ -311,7 +311,7 @@ def analyze():
         return jsonify({'error': str(e)}), 500
 
 # =============================================
-# 9. RUTAS DE ARCHIVOS (puedes adaptar para RFC)
+# 9. RUTAS DE ARCHIVOS 
 # =============================================
 @app.route('/api/mis-archivos')
 @login_required
