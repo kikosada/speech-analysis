@@ -1,6 +1,0 @@
-/Users/kiko/Desktop/Verano/.venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
-  warnings.warn(
-Traceback (most recent call last):
-  File "/Users/kiko/Desktop/Verano/app.py", line 11, in <module>
-    import boto3
-ModuleNotFoundError: No module named 'boto3'
