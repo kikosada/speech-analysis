@@ -3,7 +3,7 @@
 # =============================================
 from flask import Flask, jsonify, request, render_template, redirect, url_for, session, send_from_directory
 import os
-from src.app.transcribe import AssemblyAITranscriber as Transcriber
+from app.transcribe import AssemblyAITranscriber as Transcriber
 from werkzeug.utils import secure_filename
 import logging
 from authlib.integrations.flask_client import OAuth
@@ -18,7 +18,7 @@ from datetime import datetime, timedelta, timezone
 import mimetypes
 import uuid
 import unicodedata
-from src.app.azure_transcriber import AzureTranscriber
+from app.azure_transcriber import AzureTranscriber
 import subprocess
 import json
 
