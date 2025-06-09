@@ -622,8 +622,8 @@ def api_cliente_analysis(rfc):
 # Configurar API_KEY en Render
 os.environ['API_KEY'] = 'la_clave_secreta_de_kiko'
 
-app.config['SESSION_COOKIE_SAMESITE'] = 'None'
-app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = False
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
