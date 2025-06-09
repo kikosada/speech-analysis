@@ -1,17 +1,14 @@
 import multiprocessing
+import os
 
-# Número de workers
+port = int(os.environ.get("PORT", 10000))
+bind = f"0.0.0.0:{port}"
 workers = multiprocessing.cpu_count() * 2 + 1
-
-# Configuración del servidor
-bind = "0.0.0.0:10000"
-timeout = 300  # 5 minutos
+timeout = 120
 keepalive = 5
-
-# Configuración de logging
-accesslog = "-"
-errorlog = "-"
-loglevel = "info"
+errorlog = '-'
+loglevel = 'info'
+accesslog = '-'
 
 # Configuración de workers
 worker_class = "sync"
