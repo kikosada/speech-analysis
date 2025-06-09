@@ -1,7 +1,7 @@
 import azure.cognitiveservices.speech as speechsdk
 import os
 import tempfile
-from src.app.transcribe import analyze_company_knowledge  # Importar función de análisis
+from app.transcribe import analyze_company_knowledge  # Importar función de análisis
 
 class AzureTranscriber:
     def __init__(self, speech_key=None, service_region=None):

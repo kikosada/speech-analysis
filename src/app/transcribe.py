@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Optional, Dict, Any, List, Tuple
 from datetime import datetime
-from src.app.transcriber_base import BaseTranscriber
+from app.transcriber_base import BaseTranscriber
 
 def analyze_company_knowledge(text: str) -> Tuple[Dict[str, int], List[str]]:
     """
@@ -32,7 +32,7 @@ def analyze_company_knowledge(text: str) -> Tuple[Dict[str, int], List[str]]:
         {
             'key': 'productos',
             'name': 'Productos y Servicios',
-            'patterns': ['producto', 'servicio', 'solución', 'ofrece', 'proporciona', 'brinda', 'entrega', 'desarrolla', 'crea', 'produce', 'fabrica', 'característica', 'beneficio', 'ventaja', 'diferencial'],
+            'patterns': ['producto', 'servicio', 'solución', 'ofrece', 'proporciona', 'brinda', 'entrega', 'desarrolla', 'crea', 'produce', 'fabrica', 'característica', 'beneficio', 'ventaja', 'diferencial', 'producto', 'productos', ],
             'feedback': 'Conoce en detalle los productos y servicios que ofrece la empresa.'
         },
         {
