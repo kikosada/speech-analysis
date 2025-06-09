@@ -79,7 +79,10 @@ users = {}
 
 @login_manager.user_loader
 def load_user(user_id):
-    return users.get(user_id)
+    email = session.get('email')
+    if email:
+        return User(user_id, '', email)
+    return None
 
 # =============================================
 # 4. FUNCIONES DE UTILIDAD
