@@ -1,0 +1,35 @@
+# Archivos y carpetas del sistema
+.DS_Store
+.env
+*.log
+*.json
+
+# Python
+*.pyc
+__pycache__/
+.venv/
+
+# Herramientas de desarrollo
+.cursor/
+.idea/
+.vscode/
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Archivos de audio y datos
+*.mp3
+*.m4a
+*.wav
+*.flac
+*.mp4
+*.webm
+output/
+transcriptions/
+data/
+
+# Otros
+*.sqlite3 
