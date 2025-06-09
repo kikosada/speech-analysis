@@ -174,6 +174,8 @@ def login_asesor_page():
 
 @app.route('/login-cliente')
 def login_cliente_page():
+    if current_user.is_authenticated:
+        return redirect(url_for('cliente'))
     return render_template('login_cliente.html')
 
 @app.route('/login-asesor/google')
