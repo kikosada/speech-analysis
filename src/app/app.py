@@ -190,6 +190,7 @@ def auth_callback():
     users[user.id] = user
     login_user(user)
     session['email'] = user.email
+    print('Usuario autenticado después de login_user:', current_user.is_authenticated)
     tipo = session.pop('tipo_login', 'asesor')
     if tipo == 'cliente':
         return redirect(url_for('cliente'))
@@ -337,7 +338,9 @@ def descargar_archivo(empresa, filename):
 # =============================================
 # 10. RUTAS DE ASESOR Y CLIENTE
 # =============================================
-# ========== RUTAS Y LÓGICA DE ASESOR (DESHABILITADAS) ==========
+
+
+# ========== RUTAS Y LÓGICA DE ASESOR (no se necesitan ahorita) ==========
 # @app.route('/login-asesor')
 # def login_asesor_page():
 #     if current_user.is_authenticated and session.get('tipo_login') == 'cliente':
@@ -373,6 +376,7 @@ def descargar_archivo(empresa, filename):
 @app.route('/cliente')
 @login_required
 def cliente():
+    print('Entrando a /cliente, autenticado:', current_user.is_authenticated)
     return render_template('cliente/cliente.html')
 
 @app.route('/cliente_upload', methods=['POST'])
