@@ -166,23 +166,11 @@ def get_azure_blob_sas_url(blob_name, expiration_minutes=60):
 def index():
     return render_template('index.html')
 
-@app.route('/login-asesor')
-def login_asesor_page():
-    if current_user.is_authenticated and session.get('tipo_login') == 'cliente':
-        return redirect(url_for('cliente'))
-    return render_template('login_asesor.html')
-
 @app.route('/login-cliente')
 def login_cliente_page():
     if current_user.is_authenticated:
         return redirect(url_for('cliente'))
     return render_template('login_cliente.html')
-
-@app.route('/login-asesor/google')
-def login_asesor_google():
-    session['tipo_login'] = 'asesor'
-    redirect_uri = url_for('auth_callback', _external=True)
-    return google.authorize_redirect(redirect_uri)
 
 @app.route('/login-cliente/google')
 def login_cliente_google():
@@ -349,30 +337,43 @@ def descargar_archivo(empresa, filename):
 # =============================================
 # 10. RUTAS DE ASESOR Y CLIENTE
 # =============================================
-@app.route('/asesor')
-@login_required
-def asesor():
-    if session.get('tipo_login') == 'cliente':
-        return redirect(url_for('cliente'))
-    if not session.get('empresa'):
-        return redirect(url_for('empresa'))
-    return render_template('asesor.html')
+# ========== RUTAS Y LÓGICA DE ASESOR (DESHABILITADAS) ==========
+# @app.route('/login-asesor')
+# def login_asesor_page():
+#     if current_user.is_authenticated and session.get('tipo_login') == 'cliente':
+#         return redirect(url_for('cliente'))
+#     return render_template('login_asesor.html')
+
+# @app.route('/login-asesor/google')
+# def login_asesor_google():
+#     session['tipo_login'] = 'asesor'
+#     redirect_uri = url_for('auth_callback', _external=True)
+#     return google.authorize_redirect(redirect_uri)
+
+# @app.route('/asesor')
+# @login_required
+# def asesor():
+#     if session.get('tipo_login') == 'cliente':
+#         return redirect(url_for('cliente'))
+#     if not session.get('empresa'):
+#         return redirect(url_for('empresa'))
+#     return render_template('asesor.html')
+
+# @app.route('/empresa', methods=['GET', 'POST'])
+# @login_required
+# def empresa():
+#     if request.method == 'POST':
+#         nombre_empresa = request.form.get('empresa', '').strip()
+#         if not nombre_empresa:
+#             return render_template('empresa.html', error='Por favor ingresa el nombre de la empresa')
+#         session['empresa'] = nombre_empresa
+#         return redirect(url_for('asesor'))
+#     return render_template('empresa.html')
 
 @app.route('/cliente')
 @login_required
 def cliente():
     return render_template('cliente/cliente.html')
-
-@app.route('/empresa', methods=['GET', 'POST'])
-@login_required
-def empresa():
-    if request.method == 'POST':
-        nombre_empresa = request.form.get('empresa', '').strip()
-        if not nombre_empresa:
-            return render_template('empresa.html', error='Por favor ingresa el nombre de la empresa')
-        session['empresa'] = nombre_empresa
-        return redirect(url_for('asesor'))
-    return render_template('empresa.html')
 
 @app.route('/cliente_upload', methods=['POST'])
 @login_required
