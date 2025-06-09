@@ -1,1 +1,31 @@
- 
+services:
+  - type: web
+    name: asesoria-app
+    env: python
+    buildCommand: pip install -r src/config/requirements.txt
+    startCommand: cd src && gunicorn app.app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.0
+      - key: SECRET_KEY
+        generateValue: true
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: AZURE_STORAGE_ACCOUNT_NAME
+        sync: false
+      - key: AZURE_STORAGE_ACCOUNT_KEY
+        sync: false
+      - key: AZURE_CLIENTE_ACCOUNT_KEY
+        sync: false
+      - key: AZURE_CONTAINER_NAME
+        value: archivos-miapp-kiko
+      - key: AZURE_CLIENTE_CONTAINER
+        value: clienteai
+      - key: AZURE_SPEECH_KEY
+        sync: false
+      - key: AZURE_SPEECH_REGION
+        value: eastus
+      - key: API_KEY
+        value: la_clave_secreta_de_kiko 
