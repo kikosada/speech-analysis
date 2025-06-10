@@ -22,6 +22,8 @@ from app.azure_transcriber import AzureTranscriber
 import subprocess
 import json
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from flask_session import Session
+from sqlalchemy import create_engine
 
 app = Flask(__name__,
     template_folder='../templates',
@@ -89,16 +91,12 @@ def load_user(user_id):
         return User(id_=user_id, name=name, email=email)
     return None
 
-# Configuración de sesión
-app.config['SESSION_COOKIE_SECURE'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)
-app.config['SESSION_COOKIE_NAME'] = 'crediclub_session'
-app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=1)
-app.config['REMEMBER_COOKIE_SECURE'] = True
-app.config['REMEMBER_COOKIE_HTTPONLY'] = True
-app.config['REMEMBER_COOKIE_SAMESITE'] = 'Lax'
+# Configuración de sesión en PostgreSQL
+app.config['SESSION_TYPE'] = 'sqlalchemy'
+app.config['SESSION_SQLALCHEMY'] = create_engine('postgresql://postgressql_vd60_user:oUDjiUxscSeoTWlygkNf6SmYTTYcw8T6@dpg-d14719buibrs73e0ch1g-a.virginia-postgres.render.com/postgressql_vd60')
+app.config['SESSION_PERMANENT'] = True
+app.config['SESSION_USE_SIGNER'] = True
+Session(app)
 
 @app.before_request
 def make_session_permanent():
