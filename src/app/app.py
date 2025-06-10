@@ -68,19 +68,26 @@ login_manager.login_view = 'login_cliente_page'
 
 class User(UserMixin):
     def __init__(self, id_, name, email):
-        self.id = id_
+        self.id = str(id_)  # Asegurar que el ID sea string
         self.name = name
         self.email = email
 
     def get_id(self):
-        return str(self.id)
+        return str(self.id)  # Asegurar que el ID sea string
+
+    def __repr__(self):
+        return f'<User {self.email}>'
 
 users = {}
 
 @login_manager.user_loader
 def load_user(user_id):
+    print('Cargando usuario con ID:', user_id)
+    print('Usuarios disponibles:', list(users.keys()))
     if user_id in users:
+        print('Usuario encontrado:', users[user_id])
         return users[user_id]
+    print('Usuario no encontrado')
     return None
 
 # Configuración de sesión
@@ -93,6 +100,10 @@ app.config['SESSION_COOKIE_NAME'] = 'crediclub_session'
 @app.before_request
 def make_session_permanent():
     session.permanent = True
+    print('Sesión actual:', dict(session))
+    if current_user.is_authenticated:
+        print('Usuario autenticado en before_request:', current_user)
+        print('ID del usuario:', current_user.get_id())
 
 # =============================================
 # 4. FUNCIONES DE UTILIDAD
@@ -181,33 +192,52 @@ def index():
 
 @app.route('/login-cliente')
 def login_cliente_page():
+    print('Entrando a login_cliente_page')
+    print('Usuario actual:', current_user)
+    print('¿Está autenticado?:', current_user.is_authenticated)
     if current_user.is_authenticated:
+        print('Usuario autenticado, redirigiendo a /cliente')
         return redirect(url_for('cliente'))
+    print('Usuario no autenticado, mostrando página de login')
     return render_template('login_cliente.html')
 
 @app.route('/login-cliente/google')
 def login_cliente_google():
+    print('Iniciando login con Google')
     session['tipo_login'] = 'cliente'
     redirect_uri = url_for('auth_callback', _external=True)
     return google.authorize_redirect(redirect_uri)
 
 @app.route('/auth/callback')
 def auth_callback():
+    print('Callback de autenticación iniciado')
     token = google.authorize_access_token()
     userinfo = token['userinfo']
+    print('Información del usuario recibida:', userinfo)
+    
+    user_id = str(userinfo['sub'])  # Asegurar que el ID sea string
     user = User(
-        id_=userinfo['sub'],
+        id_=user_id,
         name=userinfo.get('name', ''),
         email=userinfo['email']
     )
-    users[user.id] = user
+    users[user_id] = user
+    print('Usuario creado y guardado:', user_id)
+    
     login_user(user, remember=True)
     session['email'] = user.email
+    session['user_id'] = user_id  # Guardar el ID en la sesión
     print('Usuario autenticado después de login_user:', current_user.is_authenticated)
+    print('ID del usuario actual:', current_user.get_id())
+    
     tipo = session.pop('tipo_login', 'cliente')
+    print('Tipo de login:', tipo)
+    
     if tipo == 'cliente':
+        print('Redirigiendo a /cliente')
         return redirect(url_for('cliente'))
     else:
+        print('Redirigiendo a /empresa')
         return redirect(url_for('empresa'))
 
 @app.route('/logout')
@@ -389,7 +419,10 @@ def descargar_archivo(empresa, filename):
 @app.route('/cliente')
 @login_required
 def cliente():
-    print('Entrando a /cliente, autenticado:', current_user.is_authenticated)
+    print('Entrando a /cliente')
+    print('Usuario actual:', current_user)
+    print('¿Está autenticado?:', current_user.is_authenticated)
+    print('ID del usuario:', current_user.get_id())
     return render_template('cliente/cliente.html')
 
 @app.route('/cliente_upload', methods=['POST'])
