@@ -65,6 +65,7 @@ google = oauth.register(
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login_cliente_page'
+login_manager.session_protection = 'strong'
 
 class User(UserMixin):
     def __init__(self, id_, name, email):
@@ -96,6 +97,10 @@ app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)
 app.config['SESSION_COOKIE_NAME'] = 'crediclub_session'
+app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=1)
+app.config['REMEMBER_COOKIE_SECURE'] = True
+app.config['REMEMBER_COOKIE_HTTPONLY'] = True
+app.config['REMEMBER_COOKIE_SAMESITE'] = 'Lax'
 
 @app.before_request
 def make_session_permanent():
@@ -195,9 +200,18 @@ def login_cliente_page():
     print('Entrando a login_cliente_page')
     print('Usuario actual:', current_user)
     print('¿Está autenticado?:', current_user.is_authenticated)
+    print('Sesión actual:', dict(session))
+    
     if current_user.is_authenticated:
         print('Usuario autenticado, redirigiendo a /cliente')
         return redirect(url_for('cliente'))
+    
+    # Si hay un parámetro 'next', guardarlo en la sesión
+    next_page = request.args.get('next')
+    if next_page:
+        session['next'] = next_page
+        print('Guardando página siguiente:', next_page)
+    
     print('Usuario no autenticado, mostrando página de login')
     return render_template('login_cliente.html')
 
@@ -224,7 +238,7 @@ def auth_callback():
     users[user_id] = user
     print('Usuario creado y guardado:', user_id)
     
-    login_user(user, remember=True)
+    login_user(user, remember=True, duration=timedelta(days=1))
     session['email'] = user.email
     session['user_id'] = user_id  # Guardar el ID en la sesión
     print('Usuario autenticado después de login_user:', current_user.is_authenticated)
@@ -232,6 +246,12 @@ def auth_callback():
     
     tipo = session.pop('tipo_login', 'cliente')
     print('Tipo de login:', tipo)
+    
+    # Verificar si hay una página siguiente guardada
+    next_page = session.pop('next', None)
+    if next_page:
+        print('Redirigiendo a página siguiente:', next_page)
+        return redirect(next_page)
     
     if tipo == 'cliente':
         print('Redirigiendo a /cliente')
@@ -423,6 +443,7 @@ def cliente():
     print('Usuario actual:', current_user)
     print('¿Está autenticado?:', current_user.is_authenticated)
     print('ID del usuario:', current_user.get_id())
+    print('Sesión actual:', dict(session))
     return render_template('cliente/cliente.html')
 
 @app.route('/cliente_upload', methods=['POST'])
