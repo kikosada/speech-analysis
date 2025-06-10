@@ -12,3 +12,4 @@ azure-storage-blob==12.19.0
 azure-cognitiveservices-speech==1.44.0
 Flask-Session==0.8.0
 redis==6.2.0
+flask-jwt-extended==4.7.1
