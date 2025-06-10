@@ -21,7 +21,6 @@ import unicodedata
 from app.azure_transcriber import AzureTranscriber
 import subprocess
 import json
-from flask_session import Session
 
 app = Flask(__name__,
     template_folder='../templates',
@@ -90,8 +89,8 @@ def load_user(user_id):
     return None
 
 # Configuración de sesión
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)
 app.config['SESSION_COOKIE_NAME'] = 'crediclub_session'
@@ -99,12 +98,6 @@ app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=1)
 app.config['REMEMBER_COOKIE_SECURE'] = True
 app.config['REMEMBER_COOKIE_HTTPONLY'] = True
 app.config['REMEMBER_COOKIE_SAMESITE'] = 'Lax'
-
-app.config['SESSION_TYPE'] = 'filesystem'
-app.config['SESSION_FILE_DIR'] = '/tmp/flask_session'
-app.config['SESSION_PERMANENT'] = True
-app.config['SESSION_USE_SIGNER'] = True
-Session(app)
 
 @app.before_request
 def make_session_permanent():
