@@ -24,6 +24,7 @@ import json
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from flask_session import Session
 from sqlalchemy import create_engine
+from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__,
     template_folder='../templates',
@@ -94,7 +95,8 @@ def load_user(user_id):
 # Configuración de sesión en PostgreSQL
 app.config['SESSION_TYPE'] = 'sqlalchemy'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgressql_vd60_user:oUDjiUxscSeoTWlygkNf6SmYTTYcw8T6@dpg-d14719buibrs73e0ch1g-a.virginia-postgres.render.com/postgressql_vd60'
-app.config['SESSION_SQLALCHEMY'] = create_engine('postgresql://postgressql_vd60_user:oUDjiUxscSeoTWlygkNf6SmYTTYcw8T6@dpg-d14719buibrs73e0ch1g-a.virginia-postgres.render.com/postgressql_vd60')
+db = SQLAlchemy(app)
+app.config['SESSION_SQLALCHEMY'] = db
 app.config['SESSION_PERMANENT'] = True
 app.config['SESSION_USE_SIGNER'] = True
 Session(app)
