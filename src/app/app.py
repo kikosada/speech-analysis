@@ -103,7 +103,7 @@ Session(app)
 
 @app.before_request
 def make_session_permanent():
-    session.permanent = True
+    session.permanent = False
     print('Sesión actual:', dict(session))
     if current_user.is_authenticated:
         print('Usuario autenticado en before_request:', current_user)
