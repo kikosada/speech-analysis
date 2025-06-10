@@ -79,17 +79,13 @@ class User(UserMixin):
     def __repr__(self):
         return f'<User {self.email}>'
 
-# Usar un diccionario global para almacenar usuarios
-users = {}
-
 @login_manager.user_loader
 def load_user(user_id):
-    print('Cargando usuario con ID:', user_id)
-    print('Usuarios disponibles:', list(users.keys()))
-    if user_id in users:
-        print('Usuario encontrado:', users[user_id])
-        return users[user_id]
-    print('Usuario no encontrado')
+    # Reconstruir el usuario desde la sesión
+    email = session.get('email')
+    name = session.get('name', '')
+    if email:
+        return User(id_=user_id, name=name, email=email)
     return None
 
 # Configuración de sesión
@@ -151,16 +147,13 @@ def auth_callback():
         email=userinfo['email']
     )
     
-    # Guardar usuario en el diccionario global
-    users[user_id] = user
-    print('Usuario creado y guardado:', user_id)
-    
     # Iniciar sesión
     login_user(user, remember=True, duration=timedelta(days=1))
     
     # Guardar información en la sesión
     session['email'] = user.email
     session['user_id'] = user_id
+    session['name'] = user.name
     session['authenticated'] = True
     
     print('Usuario autenticado después de login_user:', current_user.is_authenticated)
