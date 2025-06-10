@@ -93,6 +93,7 @@ def load_user(user_id):
 
 # Configuración de sesión en PostgreSQL
 app.config['SESSION_TYPE'] = 'sqlalchemy'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgressql_vd60_user:oUDjiUxscSeoTWlygkNf6SmYTTYcw8T6@dpg-d14719buibrs73e0ch1g-a.virginia-postgres.render.com/postgressql_vd60'
 app.config['SESSION_SQLALCHEMY'] = create_engine('postgresql://postgressql_vd60_user:oUDjiUxscSeoTWlygkNf6SmYTTYcw8T6@dpg-d14719buibrs73e0ch1g-a.virginia-postgres.render.com/postgressql_vd60')
 app.config['SESSION_PERMANENT'] = True
 app.config['SESSION_USE_SIGNER'] = True
