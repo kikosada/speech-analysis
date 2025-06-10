@@ -641,6 +641,11 @@ def api_cliente_me_jwt():
     identity = get_jwt_identity()
     return jsonify(identity)
 
+@app.route('/')
+@login_required
+def root_cliente():
+    return cliente()
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     # Configuración para permitir archivos grandes y tiempos de espera más largos
