@@ -372,42 +372,57 @@ def cliente_upload():
 
         # Obtener el RFC del usuario desde los datos guardados
         user_email = getattr(current_user, 'email', None) or session.get('email', 'default')
+        print('Email del usuario:', user_email)
         datos_blob_name = f"{user_email}/datos.json"
+        print('Intentando leer datos del blob:', datos_blob_name)
         datos_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=datos_blob_name)
         try:
             datos_json = datos_blob_client.download_blob().readall()
+            print('Datos.json descargado:', datos_json)
             datos_data = json.loads(datos_json.decode("utf-8"))
+            print('Datos decodificados:', datos_data)
             rfc = datos_data.get('rfc')
+            print('RFC obtenido:', rfc)
             if not rfc:
+                print('RFC no encontrado en datos.json')
                 return jsonify({"error": "RFC no encontrado. Por favor, completa tus datos primero."}), 400
         except Exception as e:
+            print('Error al leer datos.json:', e)
             return jsonify({"error": "No se encontraron los datos del usuario. Por favor, completa tus datos primero."}), 400
 
         folder_prefix = f"{rfc}/"
         uploaded = []
         file = request.files.get('main_video')
+        print('Archivo recibido:', file)
         if file:
             filename = secure_filename(file.filename)
+            print('Nombre seguro del archivo:', filename)
             blob_name = folder_prefix + filename
+            print('Nombre del blob a subir:', blob_name)
             with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as tmp:
                 file.save(tmp.name)
+                print('Archivo guardado temporalmente en:', tmp.name)
                 with open(tmp.name, "rb") as data:
                     blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=blob_name)
                     blob_client.upload_blob(data, overwrite=True)
+                    print('Archivo subido a Azure:', blob_name)
             uploaded.append(blob_name)
             # Si es presentacion.webm, transcribe y guarda como .txt
             if filename == 'presentacion.webm':
                 try:
+                    print('Procesando presentacion.webm para transcripción')
                     # Extraer audio a wav
                     audio_wav = tmp.name + '.wav'
                     subprocess.run([
                         'ffmpeg', '-y', '-i', tmp.name, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
                     ], check=True)
+                    print('Audio extraído a:', audio_wav)
                     transcriber = AzureTranscriber(
                         speech_key=os.environ.get('AZURE_SPEECH_KEY'),
                         service_region=os.environ.get('AZURE_SPEECH_REGION', 'eastus')
                     )
                     result = transcriber.transcribe(audio_wav)
+                    print('Resultado de transcripción:', result)
                     transcript = result['text'] if isinstance(result, dict) and 'text' in result else str(result)
                     # Calificación automática simple (puedes mejorar la rúbrica después)
                     score = 1
@@ -423,18 +438,25 @@ def cliente_upload():
                     transcript_blob = folder_prefix + 'presentacion.txt'
                     blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=transcript_blob)
                     blob_client.upload_blob(transcript_bytes, overwrite=True)
+                    print('Transcripción subida como .txt:', transcript_blob)
                     # Guardar score y transcripción como .json
                     import json
                     presentacion_json = BytesIO(json.dumps({"score": score, "transcripcion": transcript}, ensure_ascii=False, indent=2).encode('utf-8'))
                     presentacion_json_blob = folder_prefix + 'presentacion.json'
                     blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=presentacion_json_blob)
                     blob_client.upload_blob(presentacion_json, overwrite=True)
+                    print('Transcripción y score subidos como .json:', presentacion_json_blob)
                 except Exception as e:
                     logger.error(f"Error transcribiendo presentacion.webm: {e}")
+        else:
+            print('No se recibió ningún archivo main_video')
         if not uploaded:
+            print('No se subió ningún video')
             return jsonify({"error": "No se subió ningún video"}), 400
+        print('Archivos subidos:', uploaded)
         return jsonify({"success": True, "uploaded": uploaded})
     except Exception as e:
+        print('Excepción general en cliente_upload:', e)
         return jsonify({"error": str(e)}), 500
 
 @app.route('/cliente_datos', methods=['POST'])
