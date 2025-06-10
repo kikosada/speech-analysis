@@ -73,16 +73,26 @@ class User(UserMixin):
         self.email = email
 
     def get_id(self):
-        return self.id
+        return str(self.id)
 
 users = {}
 
 @login_manager.user_loader
 def load_user(user_id):
-    email = session.get('email')
-    if email:
-        return User(user_id, '', email)
+    if user_id in users:
+        return users[user_id]
     return None
+
+# Configuración de sesión
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)
+app.config['SESSION_COOKIE_NAME'] = 'crediclub_session'
+
+@app.before_request
+def make_session_permanent():
+    session.permanent = True
 
 # =============================================
 # 4. FUNCIONES DE UTILIDAD
@@ -191,10 +201,10 @@ def auth_callback():
         email=userinfo['email']
     )
     users[user.id] = user
-    login_user(user)
+    login_user(user, remember=True)
     session['email'] = user.email
     print('Usuario autenticado después de login_user:', current_user.is_authenticated)
-    tipo = session.pop('tipo_login', 'asesor')
+    tipo = session.pop('tipo_login', 'cliente')
     if tipo == 'cliente':
         return redirect(url_for('cliente'))
     else:
@@ -624,9 +634,6 @@ def api_cliente_analysis(rfc):
 
 # Configurar API_KEY en Render
 os.environ['API_KEY'] = 'la_clave_secreta_de_kiko'
-
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_SECURE'] = False
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
