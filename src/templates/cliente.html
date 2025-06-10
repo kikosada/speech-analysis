@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AsesorIA - Cliente</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2.5rem 1rem;
+            line-height: 1.7;
+            background: linear-gradient(120deg, #f0f2f5 60%, #e3f0ff 100%);
+        }
+        .container {
+            background: #fff;
+            border-radius: 18px;
+            padding: 2.5rem 2rem 2rem 2rem;
+            box-shadow: 0 4px 24px rgba(52,152,219,0.10);
+            margin-top: 2.5rem;
+        }
+        .logo {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1.2rem;
+        }
+        .logo img {
+            max-width: 260px;
+            height: 72px;
+        }
+        h1 {
+            color: #1a355e;
+            margin-bottom: 1.2rem;
+            text-align: center;
+            font-size: 2.2rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
+        .video-grid {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+        .video-block {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 420px;
+        }
+        video {
+            width: 100%;
+            height: 320px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            margin-bottom: 0.5em;
+            object-fit: cover;
+            object-position: center;
+            transition: transform 0.2s;
+        }
+        .mirrored {
+            transform: scaleX(-1);
+        }
+        .label {
+            font-size: 1.1rem;
+            color: #34495e;
+            font-weight: 600;
+            margin-bottom: 0.2em;
+        }
+        .switch-btn {
+            background: #3498db;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 0.7em 1.5em;
+            font-size: 1.08rem;
+            font-weight: 600;
+            margin-bottom: 1em;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .switch-btn:hover {
+            background: #217dbb;
+        }
+        .recording-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .record-btn {
+            background: #e74c3c;
+            color: white;
+            padding: 1.1rem 2.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.15rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 1px 4px rgba(231,76,60,0.08);
+        }
+        .record-btn:hover {
+            background: #c0392b;
+        }
+        .record-btn.recording {
+            animation: pulse 1.5s infinite;
+        }
+        .timer {
+            text-align: center;
+            font-size: 1.18rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-top: 0.5em;
+        }
+        .status {
+            text-align: center;
+            color: #1976d2;
+            font-weight: 600;
+            margin-bottom: 1em;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        @media (max-width: 600px) {
+            .container {
+                padding: 0.7rem 0.1rem;
+                margin-top: 0.7rem;
+            }
+            .logo img {
+                max-width: 180px;
+                height: 48px;
+            }
+            .video-block {
+                max-width: 98vw;
+            }
+            video {
+                width: 100vw;
+                max-width: 98vw;
+                height: 98vw;
+                max-height: 98vw;
+            }
+            input[type="text"], input[type="number"] {
+                width: 92vw !important;
+                max-width: 400px;
+            }
+            textarea {
+                width: 92vw !important;
+                max-width: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <img src="/static/crediclub_logo.png" alt="Crediclub" />
+        </div>
+        <h1>AsesorIA</h1>
+        <div id="progressBar" style="display:flex;justify-content:center;gap:0.5em;margin-bottom:1.2em;"></div>
+        <!-- Paso 1: Nombre completo y nombre de la empresa -->
+        <div id="step1" class="step-block">
+            <span class="label">Paso 1: Cuéntanos sobre ti y tu empresa</span>
+            <input type="text" id="nombreCompleto" placeholder="Nombre completo" required style="width:100%;padding:0.7em;margin:1em 0 0.5em 0;font-size:1.1em;border-radius:8px;border:1.5px solid #d1d5db;">
+            <input type="text" id="nombreEmpresa" placeholder="Nombre de la empresa" required style="width:100%;padding:0.7em;margin:0.5em 0 0.5em 0;font-size:1.1em;border-radius:8px;border:1.5px solid #d1d5db;">
+            <input type="text" id="rfc" placeholder="RFC" required 
+                   pattern="^([A-ZÑ&]{3,4})(\d{6})([A-Z\d]{3})$" 
+                   title="El RFC debe tener el formato correcto, ejemplo: XAXX010101000"
+                   style="width:100%;padding:0.7em;margin:0.5em 0 0.5em 0;font-size:1.1em;border-radius:8px;border:1.5px solid #d1d5db;text-transform:uppercase;">
+            <button id="nextBtn1" class="record-btn">Siguiente</button>
+        </div>
+        <!-- Paso 2: Video presentación (frontal) -->
+        <div id="step2" class="step-block" style="display:none;">
+            <span class="label">Paso 2: Graba un video presentando tu empresa</span>
+            <video id="mainVideo1" autoplay muted playsinline class="mirrored"></video>
+            <div class="recording-controls">
+                <button id="recordBtn1" class="record-btn"><span class="record-text">Grabar presentación</span></button>
+                <div class="timer" id="timer1">00:00</div>
+            </div>
+        </div>
+        <!-- Paso 3: Video workspace (trasera) -->
+        <div id="step3" class="step-block" style="display:none;">
+            <span class="label">Paso 3: Graba un video mostrando tu espacio de trabajo</span>
+            <video id="mainVideo2" autoplay muted playsinline></video>
+            <div class="recording-controls">
+                <button id="recordBtn2" class="record-btn"><span class="record-text">Grabar workspace</span></button>
+                <div class="timer" id="timer2">00:00</div>
+            </div>
+        </div>
+        <!-- Paso 4: Giro de la empresa y número de empleados -->
+        <div id="step4" class="step-block" style="display:none;">
+            <span class="label">Paso 4: Cuéntanos más sobre tu empresa</span>
+            <textarea id="giroEmpresa" placeholder="¿A qué se dedica tu empresa?" required style="width:100%;padding:0.7em;margin:1em 0 0.5em 0;font-size:1.1em;border-radius:8px;border:1.5px solid #d1d5db;min-height:70px;"></textarea>
+            <input type="number" id="numEmpleados" min="1" placeholder="Número de empleados" required style="width:100%;padding:0.7em;margin:0.5em 0 0.5em 0;font-size:1.1em;border-radius:8px;border:1.5px solid #d1d5db;">
+            <button id="nextBtn4" class="record-btn">Siguiente</button>
+        </div>
+        <!-- Paso 5: Objetivo con Crediclub -->
+        <div id="step5" class="step-block" style="display:none;">
+            <span class="label">Paso 5: ¿Qué te gustaría lograr con Crediclub?</span>
+            <textarea id="objetivoCrediclub" placeholder="¿Cuál es tu objetivo principal al usar nuestra plataforma?" required style="width:100%;padding:0.7em;margin:1em 0 0.5em 0;font-size:1.1em;border-radius:8px;border:1.5px solid #d1d5db;min-height:70px;"></textarea>
+            <button id="finishBtn" class="record-btn">Finalizar</button>
+        </div>
+        <div id="finalMsg" style="display:none;text-align:center;font-size:1.2em;color:#1976d2;margin-top:2em;">
+            ¡Gracias! Tus respuestas han sido enviadas correctamente.
+        </div>
+    </div>
+    <script>
+    // Lógica de pasos y navegación
+    const steps = ["step1","step2","step3","step4","step5"];
+    let currentStep = 0;
+    function showStep(idx) {
+        steps.forEach((id,i)=>{
+            document.getElementById(id).style.display = (i===idx)?'block':'none';
+        });
+        // Barra de progreso
+        let bar = document.getElementById('progressBar');
+        bar.innerHTML = '';
+        for(let i=0;i<steps.length;i++){
+            bar.innerHTML += `<div style="width:32px;height:8px;border-radius:4px;margin:0 2px;background:${i<=idx?'#3498db':'#b3c6e0'};"></div>`;
+        }
+        // Inicializar cámara solo cuando se entra al paso correspondiente
+        if(idx === 1) startMainStream1();
+        if(idx === 2) startMainStream2();
+    }
+    showStep(0);
+    // Navegación entre pasos
+    document.getElementById('nextBtn1').onclick = ()=>{
+        const rfc = document.getElementById('rfc').value.trim().toUpperCase();
+        const rfcRegex = /^([A-ZÑ&]{3,4})(\d{6})([A-Z\d]{3})$/;
+        
+        if(!document.getElementById('nombreCompleto').value.trim()) {
+            alert('Por favor ingresa tu nombre completo.');
+            return;
+        }
+        if(!document.getElementById('nombreEmpresa').value.trim()) {
+            alert('Por favor ingresa el nombre de la empresa.');
+            return;
+        }
+        if(!rfc) {
+            alert('Por favor ingresa tu RFC.');
+            return;
+        }
+        if(!rfcRegex.test(rfc)) {
+            alert('El RFC ingresado no tiene el formato correcto. Debe ser de 13 caracteres para personas físicas o 12 para morales.');
+            return;
+        }
+        
+        showStep(1);
+    };
+    document.getElementById('nextBtn4').onclick = ()=>{
+        if(document.getElementById('giroEmpresa').value.trim() && document.getElementById('numEmpleados').value>0) showStep(4);
+        else alert('Por favor describe el giro de tu empresa y el número de empleados.');
+    };
+    document.getElementById('finishBtn').onclick = async ()=>{
+        if(document.getElementById('objetivoCrediclub').value.trim()){
+            // Recolectar todos los datos
+            const datos = {
+                nombreCompleto: document.getElementById('nombreCompleto').value.trim(),
+                nombreEmpresa: document.getElementById('nombreEmpresa').value.trim(),
+                rfc: document.getElementById('rfc').value.trim().toUpperCase(),
+                giroEmpresa: document.getElementById('giroEmpresa').value.trim(),
+                numEmpleados: document.getElementById('numEmpleados').value,
+                objetivoCrediclub: document.getElementById('objetivoCrediclub').value.trim()
+            };
+            // Enviar al backend
+            try {
+                const response = await fetch('/cliente_datos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(datos)
+                });
+                if (response.ok) {
+                    showStep(5);
+                    document.getElementById('finalMsg').style.display = 'block';
+                } else {
+                    alert('Error al guardar los datos.');
+                }
+            } catch (e) {
+                alert('Error al guardar los datos.');
+            }
+        }else{
+            alert('Por favor describe tu objetivo.');
+        }
+    };
+    // Lógica de video igual que antes para pasos 2 y 3
+    // --- Paso 2: Presenta tu empresa (frontal) ---
+    let mainStream1, mainRecorder1, mainChunks1 = [], recording1 = false, startTime1, timerInterval1;
+    const recordBtn1 = document.getElementById('recordBtn1');
+    const timer1 = document.getElementById('timer1');
+    const mainVideo1 = document.getElementById('mainVideo1');
+    // --- Paso 3: Enseña tu workspace (trasera) ---
+    let mainStream2, mainRecorder2, mainChunks2 = [], recording2 = false, startTime2, timerInterval2;
+    const recordBtn2 = document.getElementById('recordBtn2');
+    const timer2 = document.getElementById('timer2');
+    const mainVideo2 = document.getElementById('mainVideo2');
+    // --- Paso 2: Cámara frontal ---
+    async function startMainStream1() {
+        if (mainStream1) mainStream1.getTracks().forEach(t => t.stop());
+        try {
+            mainStream1 = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true });
+            mainVideo1.srcObject = mainStream1;
+            mainVideo1.classList.add('mirrored');
+            recordBtn1.disabled = false;
+        } catch (e) {
+            recordBtn1.disabled = true;
+        }
+    }
+    // --- Paso 3: Cámara trasera ---
+    async function startMainStream2() {
+        if (mainStream2) mainStream2.getTracks().forEach(t => t.stop());
+        try {
+            mainStream2 = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: true });
+            mainVideo2.srcObject = mainStream2;
+            mainVideo2.classList.remove('mirrored');
+            recordBtn2.disabled = false;
+        } catch (e) {
+            recordBtn2.disabled = true;
+        }
+    }
+    // --- Grabación Paso 2 ---
+    recordBtn1.addEventListener('click', async () => {
+        if (!recording1) {
+            mainChunks1 = [];
+            if (mainStream1) {
+                mainRecorder1 = new MediaRecorder(mainStream1, { mimeType: 'video/webm;codecs=vp8,opus' });
+                mainRecorder1.ondataavailable = e => { if (e.data.size > 0) mainChunks1.push(e.data); };
+                mainRecorder1.start(1000);
+            }
+            recording1 = true;
+            recordBtn1.classList.add('recording');
+            recordBtn1.querySelector('.record-text').textContent = 'Detener Grabación';
+            startTime1 = Date.now();
+            timerInterval1 = setInterval(() => {
+                const now = Date.now();
+                const diff = now - startTime1;
+                const minutes = Math.floor(diff / 60000);
+                const seconds = Math.floor((diff % 60000) / 1000);
+                timer1.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+        } else {
+            if (mainRecorder1 && mainRecorder1.state !== 'inactive') mainRecorder1.stop();
+            recording1 = false;
+            recordBtn1.classList.remove('recording');
+            recordBtn1.querySelector('.record-text').textContent = 'Grabar presentación';
+            clearInterval(timerInterval1);
+            timer1.textContent = '00:00';
+            if (mainStream1) mainStream1.getTracks().forEach(t => t.stop());
+            // Subir video automáticamente
+            const formData = new FormData();
+            if (mainChunks1.length > 0) {
+                const mainBlob = new Blob(mainChunks1, { type: 'video/webm' });
+                formData.append('main_video', mainBlob, 'presentacion.webm');
+            }
+            try {
+                const response = await fetch('/cliente_upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                if (response.ok) {
+                    showStep(2);
+                } else {
+                    alert('Error al subir el video.');
+                }
+            } catch (e) {
+                alert('Error al subir el video.');
+            }
+        }
+    });
+    // --- Grabación Paso 3 ---
+    recordBtn2.addEventListener('click', async () => {
+        if (!recording2) {
+            mainChunks2 = [];
+            if (mainStream2) {
+                mainRecorder2 = new MediaRecorder(mainStream2, { mimeType: 'video/webm;codecs=vp8,opus' });
+                mainRecorder2.ondataavailable = e => { if (e.data.size > 0) mainChunks2.push(e.data); };
+                mainRecorder2.start(1000);
+            }
+            recording2 = true;
+            recordBtn2.classList.add('recording');
+            recordBtn2.querySelector('.record-text').textContent = 'Detener Grabación';
+            startTime2 = Date.now();
+            timerInterval2 = setInterval(() => {
+                const now = Date.now();
+                const diff = now - startTime2;
+                const minutes = Math.floor(diff / 60000);
+                const seconds = Math.floor((diff % 60000) / 1000);
+                timer2.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+        } else {
+            if (mainRecorder2 && mainRecorder2.state !== 'inactive') mainRecorder2.stop();
+            recording2 = false;
+            recordBtn2.classList.remove('recording');
+            recordBtn2.querySelector('.record-text').textContent = 'Grabar workspace';
+            clearInterval(timerInterval2);
+            timer2.textContent = '00:00';
+            if (mainStream2) mainStream2.getTracks().forEach(t => t.stop());
+            // Subir video automáticamente
+            const formData = new FormData();
+            if (mainChunks2.length > 0) {
+                const mainBlob = new Blob(mainChunks2, { type: 'video/webm' });
+                formData.append('main_video', mainBlob, 'workspace.webm');
+            }
+            try {
+                const response = await fetch('/cliente_upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                if (response.ok) {
+                    showStep(3);
+                } else {
+                    alert('Error al subir el video.');
+                }
+            } catch (e) {
+                alert('Error al subir el video.');
+            }
+        }
+    });
+    // Inicializar primer paso al cargar
+    window.addEventListener('DOMContentLoaded', () => showStep(0));
+    </script>
+</body>
+</html> 
