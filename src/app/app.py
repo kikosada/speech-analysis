@@ -21,6 +21,7 @@ import unicodedata
 from app.azure_transcriber import AzureTranscriber
 import subprocess
 import json
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 
 app = Flask(__name__,
     template_folder='../templates',
@@ -357,6 +358,10 @@ def cliente():
 @app.route('/cliente_upload', methods=['POST'])
 @login_required
 def cliente_upload():
+    print('Entrando a cliente_upload')
+    print('Usuario actual:', current_user)
+    print('¿Está autenticado?:', current_user.is_authenticated)
+    print('Sesión actual:', dict(session))
     try:
         azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
         azure_account_key = os.environ.get('AZURE_CLIENTE_ACCOUNT_KEY')
@@ -594,8 +599,46 @@ def api_cliente_analysis(rfc):
         logger.error(f"Error en /api/cliente/analysis/{rfc}: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/cliente/me', methods=['GET'])
+@login_required
+def api_cliente_me():
+    return jsonify({
+        'id': current_user.get_id(),
+        'name': current_user.name,
+        'email': current_user.email
+    })
+
 # Configurar API_KEY en Render
 os.environ['API_KEY'] = 'la_clave_secreta_de_kiko'
+
+# Configuración JWT
+app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', app.secret_key)
+jwt = JWTManager(app)
+
+# Endpoint para obtener un JWT tras login exitoso
+@app.route('/api/token', methods=['POST'])
+def api_token():
+    # Espera un email en el body (en producción deberías validar con OAuth o password)
+    data = request.get_json()
+    email = data.get('email')
+    name = data.get('name', '')
+    user_id = data.get('user_id', '')
+    if not email:
+        return jsonify({'msg': 'Email requerido'}), 400
+    # Aquí podrías validar el usuario contra tu base de datos
+    access_token = create_access_token(identity={
+        'user_id': user_id,
+        'email': email,
+        'name': name
+    })
+    return jsonify(access_token=access_token)
+
+# Ejemplo de endpoint protegido con JWT
+@app.route('/api/cliente/me-jwt', methods=['GET'])
+@jwt_required()
+def api_cliente_me_jwt():
+    identity = get_jwt_identity()
+    return jsonify(identity)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
