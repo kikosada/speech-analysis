@@ -65,20 +65,21 @@ google = oauth.register(
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login_cliente_page'
-login_manager.session_protection = 'strong'
+login_manager.session_protection = None  # Desactivar protección de sesión para pruebas
 
 class User(UserMixin):
     def __init__(self, id_, name, email):
-        self.id = str(id_)  # Asegurar que el ID sea string
+        self.id = str(id_)
         self.name = name
         self.email = email
 
     def get_id(self):
-        return str(self.id)  # Asegurar que el ID sea string
+        return str(self.id)
 
     def __repr__(self):
         return f'<User {self.email}>'
 
+# Usar un diccionario global para almacenar usuarios
 users = {}
 
 @login_manager.user_loader
@@ -110,91 +111,6 @@ def make_session_permanent():
         print('Usuario autenticado en before_request:', current_user)
         print('ID del usuario:', current_user.get_id())
 
-# =============================================
-# 4. FUNCIONES DE UTILIDAD
-# =============================================
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-def format_analysis_result(raw_result):
-    """Formatea el resultado del análisis en una estructura más amigable."""
-    try:
-        return {
-            'text': raw_result.get('text', ''),
-            'scores': {
-                'historia': raw_result.get('scores', {}).get('historia', 0),
-                'mision_vision': raw_result.get('scores', {}).get('mision_vision', 0),
-                'productos': raw_result.get('scores', {}).get('productos', 0),
-                'valores': raw_result.get('scores', {}).get('valores', 0),
-                'mercado': raw_result.get('scores', {}).get('mercado', 0),
-                'logros': raw_result.get('scores', {}).get('logros', 0),
-                'overall': raw_result.get('scores', {}).get('overall', 0)
-            },
-            'feedback': raw_result.get('feedback', []),
-            'duration': raw_result.get('audio_duration', 0)
-        }
-    except Exception as e:
-        logger.error(f"Error al formatear el resultado: {str(e)}")
-        return raw_result
-
-def normaliza_empresa(nombre):
-    nombre = nombre.strip().lower()
-    nombre = ''.join(
-        c for c in unicodedata.normalize('NFD', nombre)
-        if unicodedata.category(c) != 'Mn'
-    )
-    return secure_filename(nombre)
-
-# =============================================
-# 5. FUNCIONES DE AZURE
-# =============================================
-def upload_file_to_azure(file_path, blob_name):
-    account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
-    account_key = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
-    container_name = os.environ.get('AZURE_CONTAINER_NAME', 'archivos-miapp-kiko')
-    connect_str = f"DefaultEndpointsProtocol=https;AccountName={account_name};AccountKey={account_key};EndpointSuffix=core.windows.net"
-    blob_service_client = BlobServiceClient.from_connection_string(connect_str)
-    blob_client = blob_service_client.get_blob_client(container=container_name, blob=blob_name)
-    with open(file_path, "rb") as data:
-        blob_client.upload_blob(data, overwrite=True)
-    print(f"Archivo '{file_path}' subido a Azure Blob Storage como '{blob_name}' en el contenedor '{container_name}'")
-    return True
-
-def download_file_from_azure(blob_name, local_path):
-    account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
-    account_key = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
-    container_name = os.environ.get('AZURE_CONTAINER_NAME', 'archivos-miapp-kiko')
-    connect_str = f"DefaultEndpointsProtocol=https;AccountName={account_name};AccountKey={account_key};EndpointSuffix=core.windows.net"
-    blob_service_client = BlobServiceClient.from_connection_string(connect_str)
-    blob_client = blob_service_client.get_blob_client(container=container_name, blob=blob_name)
-    with open(local_path, "wb") as f:
-        data = blob_client.download_blob()
-        f.write(data.readall())
-    print(f"Archivo descargado de Azure: {blob_name} -> {local_path}")
-    return True
-
-def get_azure_blob_sas_url(blob_name, expiration_minutes=60):
-    account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
-    account_key = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
-    container_name = os.environ.get('AZURE_CONTAINER_NAME', 'archivos-miapp-kiko')
-    sas_token = generate_blob_sas(
-        account_name=account_name,
-        container_name=container_name,
-        blob_name=blob_name,
-        account_key=account_key,
-        permission=BlobSasPermissions(read=True),
-        expiry=datetime.now(timezone.utc) + timedelta(minutes=expiration_minutes)
-    )
-    url = f"https://{account_name}.blob.core.windows.net/{container_name}/{blob_name}?{sas_token}"
-    return url
-
-# =============================================
-# 6. RUTAS DE AUTENTICACIÓN
-# =============================================
-@app.route('/')
-def index():
-    return render_template('index.html')
-
 @app.route('/login-cliente')
 def login_cliente_page():
     print('Entrando a login_cliente_page')
@@ -206,7 +122,6 @@ def login_cliente_page():
         print('Usuario autenticado, redirigiendo a /cliente')
         return redirect(url_for('cliente'))
     
-    # Si hay un parámetro 'next', guardarlo en la sesión
     next_page = request.args.get('next')
     if next_page:
         session['next'] = next_page
@@ -229,36 +144,37 @@ def auth_callback():
     userinfo = token['userinfo']
     print('Información del usuario recibida:', userinfo)
     
-    user_id = str(userinfo['sub'])  # Asegurar que el ID sea string
+    user_id = str(userinfo['sub'])
     user = User(
         id_=user_id,
         name=userinfo.get('name', ''),
         email=userinfo['email']
     )
+    
+    # Guardar usuario en el diccionario global
     users[user_id] = user
     print('Usuario creado y guardado:', user_id)
     
+    # Iniciar sesión
     login_user(user, remember=True, duration=timedelta(days=1))
+    
+    # Guardar información en la sesión
     session['email'] = user.email
-    session['user_id'] = user_id  # Guardar el ID en la sesión
+    session['user_id'] = user_id
+    session['authenticated'] = True
+    
     print('Usuario autenticado después de login_user:', current_user.is_authenticated)
     print('ID del usuario actual:', current_user.get_id())
+    print('Sesión después de login:', dict(session))
     
-    tipo = session.pop('tipo_login', 'cliente')
-    print('Tipo de login:', tipo)
-    
-    # Verificar si hay una página siguiente guardada
+    # Redirigir a la página siguiente o a /cliente
     next_page = session.pop('next', None)
     if next_page:
         print('Redirigiendo a página siguiente:', next_page)
         return redirect(next_page)
     
-    if tipo == 'cliente':
-        print('Redirigiendo a /cliente')
-        return redirect(url_for('cliente'))
-    else:
-        print('Redirigiendo a /empresa')
-        return redirect(url_for('empresa'))
+    print('Redirigiendo a /cliente')
+    return redirect(url_for('cliente'))
 
 @app.route('/logout')
 @login_required
@@ -444,6 +360,11 @@ def cliente():
     print('¿Está autenticado?:', current_user.is_authenticated)
     print('ID del usuario:', current_user.get_id())
     print('Sesión actual:', dict(session))
+    
+    if not current_user.is_authenticated:
+        print('Usuario no autenticado en /cliente, redirigiendo a login')
+        return redirect(url_for('login_cliente_page'))
+    
     return render_template('cliente/cliente.html')
 
 @app.route('/cliente_upload', methods=['POST'])
