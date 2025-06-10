@@ -21,6 +21,7 @@ import unicodedata
 from app.azure_transcriber import AzureTranscriber
 import subprocess
 import json
+from flask_session import Session
 
 app = Flask(__name__,
     template_folder='../templates',
@@ -98,6 +99,12 @@ app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=1)
 app.config['REMEMBER_COOKIE_SECURE'] = True
 app.config['REMEMBER_COOKIE_HTTPONLY'] = True
 app.config['REMEMBER_COOKIE_SAMESITE'] = 'Lax'
+
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['SESSION_FILE_DIR'] = '/tmp/flask_session'
+app.config['SESSION_PERMANENT'] = True
+app.config['SESSION_USE_SIGNER'] = True
+Session(app)
 
 @app.before_request
 def make_session_permanent():
@@ -351,14 +358,8 @@ def cliente():
     print('Entrando a /cliente')
     print('Usuario actual:', current_user)
     print('¿Está autenticado?:', current_user.is_authenticated)
-    print('ID del usuario:', current_user.get_id())
     print('Sesión actual:', dict(session))
-    
-    if not current_user.is_authenticated:
-        print('Usuario no autenticado en /cliente, redirigiendo a login')
-        return redirect(url_for('login_cliente_page'))
-    
-    return render_template('cliente/cliente.html')
+    return render_template('cliente.html')
 
 @app.route('/cliente_upload', methods=['POST'])
 @login_required
