@@ -399,13 +399,64 @@ def cliente_upload():
         if video.filename == '':
             return jsonify({"error": "No se seleccionó ningún archivo"}), 400
 
-        # Guardar el video en Azure Blob Storage con su nombre original
         from werkzeug.utils import secure_filename
         filename = secure_filename(video.filename)
         video_blob_name = f"{rfc}/{filename}"
         video_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=video_blob_name)
         video_blob_client.upload_blob(video, overwrite=True)
         print(f"Video guardado en: {video_blob_name}")
+
+        # Si es presentacion.webm, transcribir y guardar score
+        if filename == 'presentacion.webm':
+            import tempfile
+            import subprocess
+            import os
+            from io import BytesIO
+            # Guardar temporalmente el video
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as tmp:
+                video.stream.seek(0)
+                tmp.write(video.read())
+                tmp_path = tmp.name
+            # Extraer audio a wav
+            audio_wav = tmp_path + '.wav'
+            try:
+                subprocess.run([
+                    'ffmpeg', '-y', '-i', tmp_path, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
+                ], check=True)
+                print('Audio extraído a:', audio_wav)
+                # Transcribir
+                from azure.cognitiveservices.speech import SpeechConfig, AudioConfig, SpeechRecognizer
+                speech_key = os.environ.get('AZURE_SPEECH_KEY')
+                service_region = os.environ.get('AZURE_SPEECH_REGION', 'eastus')
+                speech_config = SpeechConfig(subscription=speech_key, region=service_region)
+                audio_config = AudioConfig(filename=audio_wav)
+                recognizer = SpeechRecognizer(speech_config=speech_config, audio_config=audio_config)
+                print('Iniciando transcripción...')
+                result = recognizer.recognize_once()
+                transcript = result.text
+                print('Transcripción:', transcript)
+                # Calcular score simple
+                score = 1
+                texto = transcript.lower()
+                if any(pal in texto for pal in ['empresa', 'negocio', 'compañía']): score += 2
+                if any(pal in texto for pal in ['servicio', 'producto', 'ofrecemos', 'vendemos']): score += 2
+                if any(pal in texto for pal in ['mision', 'visión', 'valores']): score += 2
+                if len(transcript.split()) > 30: score += 2
+                if score > 10: score = 10
+                # Guardar la transcripción como .txt
+                transcript_bytes = BytesIO(transcript.encode('utf-8'))
+                transcript_blob = f"{rfc}/presentacion.txt"
+                blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=transcript_blob)
+                blob_client.upload_blob(transcript_bytes, overwrite=True)
+                print('Transcripción subida como .txt:', transcript_blob)
+                # Guardar score y transcripción como .json
+                presentacion_json = BytesIO(json.dumps({"score": score, "transcripcion": transcript}, ensure_ascii=False, indent=2).encode('utf-8'))
+                presentacion_json_blob = f"{rfc}/presentacion.json"
+                blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=presentacion_json_blob)
+                blob_client.upload_blob(presentacion_json, overwrite=True)
+                print('Transcripción y score subidos como .json:', presentacion_json_blob)
+            except Exception as e:
+                print(f"Error transcribiendo presentacion.webm: {e}")
 
         return jsonify({"success": True, "message": "Video subido correctamente"})
 
@@ -637,6 +688,37 @@ def index():
         print('RFC en sesión:', session.get('rfc'))
         return redirect(url_for('cliente'))
     return redirect(url_for('login_cliente_page'))
+
+@app.route('/cliente_score')
+@login_required
+def cliente_score():
+    try:
+        rfc = session.get('rfc')
+        if not rfc:
+            return jsonify({'error': 'No se encontró el RFC en la sesión'}), 400
+        azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
+        azure_account_key = os.environ.get('AZURE_CLIENTE_ACCOUNT_KEY')
+        azure_container_name = os.environ.get('AZURE_CLIENTE_CONTAINER', 'clienteai')
+        connect_str = f"DefaultEndpointsProtocol=https;AccountName={azure_account_name};AccountKey={azure_account_key};EndpointSuffix=core.windows.net"
+        from azure.storage.blob import BlobServiceClient
+        blob_service_client = BlobServiceClient.from_connection_string(connect_str)
+        blob_name = f"{rfc}/presentacion.json"
+        blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=blob_name)
+        datos_json = blob_client.download_blob().readall()
+        import json
+        datos = json.loads(datos_json)
+        score = datos.get('score', 0)
+        # Mensaje según el score
+        if score <= 5:
+            mensaje = "Lo sentimos, vuelve a intentar en un mes."
+        elif 6 <= score <= 8:
+            mensaje = "Irá un asesor a ver la empresa..."
+        else:
+            mensaje = "¡Nos gusta tu empresa!"
+        return jsonify({'score': score, 'mensaje': mensaje})
+    except Exception as e:
+        print('Error en /cliente_score:', e)
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))

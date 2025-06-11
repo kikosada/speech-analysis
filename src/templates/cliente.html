@@ -251,8 +251,21 @@
                     body: JSON.stringify(datos)
                 });
                 if (response.ok) {
-                    showStep(5);
-                    document.getElementById('finalMsg').style.display = 'block';
+                    // Consultar el score y mostrar mensaje personalizado
+                    try {
+                        const resScore = await fetch('/cliente_score');
+                        const dataScore = await resScore.json();
+                        if (resScore.ok) {
+                            document.getElementById('finalMsg').textContent = dataScore.mensaje;
+                            showStep(5);
+                        } else {
+                            document.getElementById('finalMsg').textContent = '¡Gracias! Tus respuestas han sido enviadas correctamente.';
+                            showStep(5);
+                        }
+                    } catch (e) {
+                        document.getElementById('finalMsg').textContent = '¡Gracias! Tus respuestas han sido enviadas correctamente.';
+                        showStep(5);
+                    }
                 } else {
                     alert('Error al guardar los datos.');
                 }
