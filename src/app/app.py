@@ -373,11 +373,12 @@ def cliente_upload():
         # Obtener el RFC del usuario desde los datos guardados
         user_email = getattr(current_user, 'email', None) or session.get('email', 'default')
         print('Email del usuario:', user_email)
-        datos_blob_name = f"{user_email}/datos.json"
-        print('Intentando leer datos del blob:', datos_blob_name)
-        datos_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=datos_blob_name)
+        # Primero buscar el RFC en la carpeta del usuario (por email)
+        datos_blob_name_email = f"{user_email}/datos.json"
+        print('Intentando leer datos del blob (por email):', datos_blob_name_email)
+        datos_blob_client_email = blob_service_client.get_blob_client(container=azure_container_name, blob=datos_blob_name_email)
         try:
-            datos_json = datos_blob_client.download_blob().readall()
+            datos_json = datos_blob_client_email.download_blob().readall()
             print('Datos.json descargado:', datos_json)
             datos_data = json.loads(datos_json.decode("utf-8"))
             print('Datos decodificados:', datos_data)
@@ -387,8 +388,22 @@ def cliente_upload():
                 print('RFC no encontrado en datos.json')
                 return jsonify({"error": "RFC no encontrado. Por favor, completa tus datos primero."}), 400
         except Exception as e:
-            print('Error al leer datos.json:', e)
+            print('Error al leer datos.json por email:', e)
             return jsonify({"error": "No se encontraron los datos del usuario. Por favor, completa tus datos primero."}), 400
+
+        # Ahora buscar datos.json en la carpeta del RFC
+        datos_blob_name_rfc = f"{rfc}/datos.json"
+        print('Intentando leer datos del blob (por RFC):', datos_blob_name_rfc)
+        datos_blob_client_rfc = blob_service_client.get_blob_client(container=azure_container_name, blob=datos_blob_name_rfc)
+        try:
+            datos_json_rfc = datos_blob_client_rfc.download_blob().readall()
+            print('Datos.json por RFC descargado:', datos_json_rfc)
+        except Exception as e:
+            print('No existe datos.json en carpeta RFC, lo creamos...')
+            # Copiar el datos.json de la carpeta del email a la del RFC
+            blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=datos_blob_name_rfc)
+            blob_client.upload_blob(datos_json, overwrite=True)
+            print('datos.json copiado a carpeta RFC')
 
         folder_prefix = f"{rfc}/"
         uploaded = []
@@ -473,7 +488,6 @@ def cliente_datos():
         rfc = datos.get('rfc')
         if not rfc:
             return jsonify({"error": "El RFC es obligatorio"}), 400
-        
         # Guardar datos.json en la carpeta del RFC
         folder_prefix = f"{rfc}/"
         blob_name = folder_prefix + 'datos.json'
@@ -482,8 +496,10 @@ def cliente_datos():
         datos_bytes = BytesIO(json.dumps(datos, ensure_ascii=False, indent=2).encode('utf-8'))
         blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=blob_name)
         blob_client.upload_blob(datos_bytes, overwrite=True)
+        print(f"datos.json guardado en carpeta RFC: {blob_name}")
         return jsonify({"success": True})
     except Exception as e:
+        print('Excepción en cliente_datos:', e)
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/cliente/upload', methods=['POST'])
