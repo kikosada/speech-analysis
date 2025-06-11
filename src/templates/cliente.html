@@ -156,15 +156,16 @@
     </style>
 </head>
 <body>
+    <div style="color:red;font-size:2em;text-align:center;">PRUEBA123</div>
     <div class="container">
         <div class="logo">
             <img src="/static/crediclub_logo.png" alt="Crediclub" />
         </div>
         <h1>AsesorIA</h1>
         <div id="progressBar" style="display:flex;justify-content:center;gap:0.5em;margin-bottom:1.2em;"></div>
-        <!-- Paso 1: Formulario de datos iniciales -->
+        <!-- Paso 1: Nombre completo y nombre de la empresa -->
         <div id="step1" class="step-block">
-            <span class="label">Paso 1: Ingresa tus datos</span>
+            <span class="label">Paso 1: Cuéntanos sobre ti y tu empresa</span>
             <input type="text" id="nombreCompleto" placeholder="Nombre completo" required style="width:100%;padding:0.7em;margin:1em 0 0.5em 0;font-size:1.1em;border-radius:8px;border:1.5px solid #d1d5db;">
             <input type="text" id="nombreEmpresa" placeholder="Nombre de la empresa" required style="width:100%;padding:0.7em;margin:0.5em 0 0.5em 0;font-size:1.1em;border-radius:8px;border:1.5px solid #d1d5db;">
             <input type="text" id="rfc" placeholder="RFC" required 
@@ -204,8 +205,11 @@
             <textarea id="objetivoCrediclub" placeholder="¿Cuál es tu objetivo principal al usar nuestra plataforma?" required style="width:100%;padding:0.7em;margin:1em 0 0.5em 0;font-size:1.1em;border-radius:8px;border:1.5px solid #d1d5db;min-height:70px;"></textarea>
             <button id="finishBtn" class="record-btn">Finalizar</button>
         </div>
-        <div id="finalMsg" style="display:none;text-align:center;font-size:1.2em;color:#1976d2;margin-top:2em;">
-            ¡Gracias! Tus respuestas han sido enviadas correctamente.
+        <!-- Paso 6: Mensaje final -->
+        <div id="step6" class="step-block" style="display:none;">
+            <div id="finalMsg" style="text-align:center;font-size:1.2em;color:#1976d2;margin-top:2em;">
+                ¡Gracias! Tus respuestas han sido enviadas correctamente.
+            </div>
         </div>
     </div>
     <script>
