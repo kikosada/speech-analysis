@@ -163,16 +163,29 @@
         <h1>AsesorIA</h1>
         
         {% if show_form %}
-        <!-- Formulario inicial -->
-        <div id="initialForm">
-            <span class="label">Por favor, completa tus datos iniciales</span>
-            <input type="text" id="nombreCompleto" placeholder="Nombre completo" required style="width:100%;padding:0.7em;margin:1em 0 0.5em 0;font-size:1.1em;border-radius:8px;border:1.5px solid #d1d5db;">
-            <input type="text" id="nombreEmpresa" placeholder="Nombre de la empresa" required style="width:100%;padding:0.7em;margin:0.5em 0 0.5em 0;font-size:1.1em;border-radius:8px;border:1.5px solid #d1d5db;">
-            <input type="text" id="rfc" placeholder="RFC" required 
-                   pattern="^([A-ZÑ&]{3,4})(\d{6})([A-Z\d]{3})$" 
-                   title="El RFC debe tener el formato correcto, ejemplo: XAXX010101000"
-                   style="width:100%;padding:0.7em;margin:0.5em 0 0.5em 0;font-size:1.1em;border-radius:8px;border:1.5px solid #d1d5db;text-transform:uppercase;">
-            <button id="submitInitialForm" class="record-btn">Continuar</button>
+        <div class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl p-6">
+            <h2 class="text-2xl font-bold mb-4">Datos Iniciales</h2>
+            <form id="initialForm" class="space-y-4">
+                <div>
+                    <label for="nombreCompleto" class="block text-sm font-medium text-gray-700">Nombre Completo</label>
+                    <input type="text" id="nombreCompleto" name="nombreCompleto" required
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label for="nombreEmpresa" class="block text-sm font-medium text-gray-700">Nombre de la Empresa</label>
+                    <input type="text" id="nombreEmpresa" name="nombreEmpresa" required
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label for="rfc" class="block text-sm font-medium text-gray-700">RFC</label>
+                    <input type="text" id="rfc" name="rfc" required
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                </div>
+                <button type="submit"
+                    class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Guardar Datos
+                </button>
+            </form>
         </div>
         {% else %}
         <!-- Pasos de video -->
@@ -226,54 +239,33 @@
     </div>
     <script>
     {% if show_form %}
-    // Lógica para el formulario inicial
-    document.getElementById('submitInitialForm').onclick = async () => {
-        const nombreCompleto = document.getElementById('nombreCompleto').value.trim();
-        const nombreEmpresa = document.getElementById('nombreEmpresa').value.trim();
-        const rfc = document.getElementById('rfc').value.trim().toUpperCase();
-        const rfcRegex = /^([A-ZÑ&]{3,4})(\d{6})([A-Z\d]{3})$/;
+    document.getElementById('initialForm')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const formData = {
+            nombreCompleto: document.getElementById('nombreCompleto').value,
+            nombreEmpresa: document.getElementById('nombreEmpresa').value,
+            rfc: document.getElementById('rfc').value
+        };
         
-        if(!nombreCompleto) {
-            alert('Por favor ingresa tu nombre completo.');
-            return;
-        }
-        if(!nombreEmpresa) {
-            alert('Por favor ingresa el nombre de la empresa.');
-            return;
-        }
-        if(!rfc) {
-            alert('Por favor ingresa tu RFC.');
-            return;
-        }
-        if(!rfcRegex.test(rfc)) {
-            alert('El RFC ingresado no tiene el formato correcto. Debe ser de 13 caracteres para personas físicas o 12 para morales.');
-            return;
-        }
-
         try {
             const response = await fetch('/cliente_datos', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    nombreCompleto,
-                    nombreEmpresa,
-                    rfc
-                })
+                body: JSON.stringify(formData)
             });
-
+            const data = await response.json();
             if (response.ok) {
-                window.location.reload(); // Recargar la página para mostrar los pasos de video
+                window.location.reload();
             } else {
-                const data = await response.json();
                 alert(data.error || 'Error al guardar los datos');
             }
         } catch (error) {
             console.error('Error:', error);
             alert('Error al guardar los datos');
         }
-    };
+    });
     {% else %}
     // Lógica de pasos y navegación
     const steps = ["step1","step2","step3","step4","step5"];

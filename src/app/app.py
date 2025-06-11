@@ -370,104 +370,43 @@ def cliente_upload():
     print('¿Está autenticado?:', current_user.is_authenticated)
     print('Sesión actual:', dict(session))
     
-    # Verificar si el usuario ya tiene RFC en la sesión
-    if not session.get('rfc'):
-        print('No hay RFC en la sesión, redirigiendo al formulario inicial')
-        return jsonify({"error": "Por favor, completa tus datos iniciales primero", "redirect": "/cliente"}), 400
-    
     try:
-        azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
-        azure_account_key = os.environ.get('AZURE_CLIENTE_ACCOUNT_KEY')
-        azure_container_name = os.environ.get('AZURE_CLIENTE_CONTAINER', 'clienteai')
-        connect_str = f"DefaultEndpointsProtocol=https;AccountName={azure_account_name};AccountKey={azure_account_key};EndpointSuffix=core.windows.net"
-        blob_service_client = BlobServiceClient.from_connection_string(connect_str)
-
-        # Obtener el RFC del usuario desde la sesión
+        # Obtener RFC de la sesión
         rfc = session.get('rfc')
         print('RFC en sesión:', rfc)
         if not rfc:
-            print('No se encontró RFC para el usuario')
-            return jsonify({"error": "No se encontró RFC para el usuario. Por favor, completa tus datos primero."}), 400
+            return jsonify({"error": "No se encontró el RFC en la sesión"}), 400
 
-        folder_prefix = f"{rfc}/"
-        datos_blob_name = folder_prefix + 'datos.json'
-        print('Intentando leer datos del blob:', datos_blob_name)
-        datos_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=datos_blob_name)
+        # Verificar que existe el archivo datos.json
+        print('Intentando leer datos del blob:', f"{rfc}/datos.json")
         try:
-            datos_json = datos_blob_client.download_blob().readall()
+            blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=f"{rfc}/datos.json")
+            datos_json = blob_client.download_blob().readall()
             print('Datos.json descargado:', datos_json)
-            datos_data = json.loads(datos_json.decode("utf-8"))
-            print('Datos decodificados:', datos_data)
+            datos = json.loads(datos_json)
+            print('Datos procesados:', datos)
         except Exception as e:
-            print('Error al leer datos.json:', e)
-            return jsonify({"error": "No se encontraron los datos del usuario. Por favor, completa tus datos primero."}), 400
+            print('Error al leer datos.json:', str(e))
+            return jsonify({"error": "No se encontró el archivo de datos"}), 400
 
-        uploaded = []
-        file = request.files.get('main_video')
-        print('Archivo recibido:', file)
-        if file:
-            filename = secure_filename(file.filename)
-            print('Nombre seguro del archivo:', filename)
-            blob_name = folder_prefix + filename
-            print('Nombre del blob a subir:', blob_name)
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as tmp:
-                file.save(tmp.name)
-                print('Archivo guardado temporalmente en:', tmp.name)
-                with open(tmp.name, "rb") as data:
-                    blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=blob_name)
-                    blob_client.upload_blob(data, overwrite=True)
-                    print('Archivo subido a Azure:', blob_name)
-            uploaded.append(blob_name)
-            # Si es presentacion.webm, transcribe y guarda como .txt
-            if filename == 'presentacion.webm':
-                try:
-                    print('Procesando presentacion.webm para transcripción')
-                    # Extraer audio a wav
-                    audio_wav = tmp.name + '.wav'
-                    subprocess.run([
-                        'ffmpeg', '-y', '-i', tmp.name, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
-                    ], check=True)
-                    print('Audio extraído a:', audio_wav)
-                    transcriber = AzureTranscriber(
-                        speech_key=os.environ.get('AZURE_SPEECH_KEY'),
-                        service_region=os.environ.get('AZURE_SPEECH_REGION', 'eastus')
-                    )
-                    result = transcriber.transcribe(audio_wav)
-                    print('Resultado de transcripción:', result)
-                    transcript = result['text'] if isinstance(result, dict) and 'text' in result else str(result)
-                    # Calificación automática simple (puedes mejorar la rúbrica después)
-                    score = 1
-                    texto = transcript.lower()
-                    if any(pal in texto for pal in ['empresa', 'negocio', 'compañía']): score += 2
-                    if any(pal in texto for pal in ['servicio', 'producto', 'ofrecemos', 'vendemos']): score += 2
-                    if any(pal in texto for pal in ['mision', 'visión', 'valores']): score += 2
-                    if len(transcript.split()) > 30: score += 2
-                    if score > 10: score = 10
-                    # Guardar la transcripción como .txt
-                    from io import BytesIO
-                    transcript_bytes = BytesIO(transcript.encode('utf-8'))
-                    transcript_blob = folder_prefix + 'presentacion.txt'
-                    blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=transcript_blob)
-                    blob_client.upload_blob(transcript_bytes, overwrite=True)
-                    print('Transcripción subida como .txt:', transcript_blob)
-                    # Guardar score y transcripción como .json
-                    import json
-                    presentacion_json = BytesIO(json.dumps({"score": score, "transcripcion": transcript}, ensure_ascii=False, indent=2).encode('utf-8'))
-                    presentacion_json_blob = folder_prefix + 'presentacion.json'
-                    blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=presentacion_json_blob)
-                    blob_client.upload_blob(presentacion_json, overwrite=True)
-                    print('Transcripción y score subidos como .json:', presentacion_json_blob)
-                except Exception as e:
-                    logger.error(f"Error transcribiendo presentacion.webm: {e}")
-        else:
-            print('No se recibió ningún archivo main_video')
-        if not uploaded:
-            print('No se subió ningún video')
-            return jsonify({"error": "No se subió ningún video"}), 400
-        print('Archivos subidos:', uploaded)
-        return jsonify({"success": True, "uploaded": uploaded})
+        # Procesar el video
+        if 'video' not in request.files:
+            return jsonify({"error": "No se envió ningún archivo"}), 400
+        
+        video = request.files['video']
+        if video.filename == '':
+            return jsonify({"error": "No se seleccionó ningún archivo"}), 400
+
+        # Guardar el video en Azure Blob Storage
+        video_blob_name = f"{rfc}/video.mp4"
+        video_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=video_blob_name)
+        video_blob_client.upload_blob(video, overwrite=True)
+        print(f"Video guardado en: {video_blob_name}")
+
+        return jsonify({"success": True, "message": "Video subido correctamente"})
+
     except Exception as e:
-        print('Excepción general en cliente_upload:', e)
+        print('Error en cliente_upload:', str(e))
         return jsonify({"error": str(e)}), 500
 
 @app.route('/cliente_datos', methods=['POST'])
@@ -687,9 +626,16 @@ def api_cliente_me_jwt():
     return jsonify(identity)
 
 @app.route('/')
-@login_required
-def root_cliente():
-    return cliente()
+def index():
+    print('Entrando a /')
+    if current_user.is_authenticated:
+        print('Usuario autenticado en /')
+        print('RFC en sesión:', session.get('rfc'))
+        if not session.get('rfc'):
+            print('No hay RFC en la sesión, mostrando formulario inicial')
+            return render_template('cliente.html', show_form=True)
+        return render_template('cliente.html')
+    return redirect(url_for('login_cliente_page'))
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
