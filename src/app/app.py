@@ -503,6 +503,7 @@ def cliente_datos():
         blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=blob_name)
         blob_client.upload_blob(datos_bytes, overwrite=True)
         print(f"datos.json guardado en carpeta RFC: {blob_name}")
+        session['rfc'] = rfc  # Guardar el RFC en la sesión
         return jsonify({"success": True})
     except Exception as e:
         print('Excepción en cliente_datos:', e)
