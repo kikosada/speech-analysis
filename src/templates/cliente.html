@@ -188,22 +188,11 @@
             </form>
         </div>
         {% else %}
-        <!-- Pasos de video -->
+        <!-- Pasos de video (wizard) -->
         <div id="progressBar" style="display:flex;justify-content:center;gap:0.5em;margin-bottom:1.2em;"></div>
-        <!-- Paso 1: Nombre completo y nombre de la empresa -->
-        <div id="step1" class="step-block">
-            <span class="label">Paso 1: Cuéntanos sobre ti y tu empresa</span>
-            <input type="text" id="nombreCompleto" placeholder="Nombre completo" required style="width:100%;padding:0.7em;margin:1em 0 0.5em 0;font-size:1.1em;border-radius:8px;border:1.5px solid #d1d5db;">
-            <input type="text" id="nombreEmpresa" placeholder="Nombre de la empresa" required style="width:100%;padding:0.7em;margin:0.5em 0 0.5em 0;font-size:1.1em;border-radius:8px;border:1.5px solid #d1d5db;">
-            <input type="text" id="rfc" placeholder="RFC" required 
-                   pattern="^([A-ZÑ&]{3,4})(\d{6})([A-Z\d]{3})$" 
-                   title="El RFC debe tener el formato correcto, ejemplo: XAXX010101000"
-                   style="width:100%;padding:0.7em;margin:0.5em 0 0.5em 0;font-size:1.1em;border-radius:8px;border:1.5px solid #d1d5db;text-transform:uppercase;">
-            <button id="nextBtn1" class="record-btn">Siguiente</button>
-        </div>
         <!-- Paso 2: Video presentación (frontal) -->
-        <div id="step2" class="step-block" style="display:none;">
-            <span class="label">Paso 2: Graba un video presentando tu empresa</span>
+        <div id="step2" class="step-block">
+            <span class="label">Paso 1: Graba un video presentando tu empresa</span>
             <video id="mainVideo1" autoplay muted playsinline class="mirrored"></video>
             <div class="recording-controls">
                 <button id="recordBtn1" class="record-btn"><span class="record-text">Grabar presentación</span></button>
@@ -212,7 +201,7 @@
         </div>
         <!-- Paso 3: Video workspace (trasera) -->
         <div id="step3" class="step-block" style="display:none;">
-            <span class="label">Paso 3: Graba un video mostrando tu espacio de trabajo</span>
+            <span class="label">Paso 2: Graba un video mostrando tu espacio de trabajo</span>
             <video id="mainVideo2" autoplay muted playsinline></video>
             <div class="recording-controls">
                 <button id="recordBtn2" class="record-btn"><span class="record-text">Grabar workspace</span></button>
@@ -221,14 +210,14 @@
         </div>
         <!-- Paso 4: Giro de la empresa y número de empleados -->
         <div id="step4" class="step-block" style="display:none;">
-            <span class="label">Paso 4: Cuéntanos más sobre tu empresa</span>
+            <span class="label">Paso 3: Cuéntanos más sobre tu empresa</span>
             <textarea id="giroEmpresa" placeholder="¿A qué se dedica tu empresa?" required style="width:100%;padding:0.7em;margin:1em 0 0.5em 0;font-size:1.1em;border-radius:8px;border:1.5px solid #d1d5db;min-height:70px;"></textarea>
             <input type="number" id="numEmpleados" min="1" placeholder="Número de empleados" required style="width:100%;padding:0.7em;margin:0.5em 0 0.5em 0;font-size:1.1em;border-radius:8px;border:1.5px solid #d1d5db;">
             <button id="nextBtn4" class="record-btn">Siguiente</button>
         </div>
         <!-- Paso 5: Objetivo con Crediclub -->
         <div id="step5" class="step-block" style="display:none;">
-            <span class="label">Paso 5: ¿Qué te gustaría lograr con Crediclub?</span>
+            <span class="label">Paso 4: ¿Qué te gustaría lograr con Crediclub?</span>
             <textarea id="objetivoCrediclub" placeholder="¿Cuál es tu objetivo principal al usar nuestra plataforma?" required style="width:100%;padding:0.7em;margin:1em 0 0.5em 0;font-size:1.1em;border-radius:8px;border:1.5px solid #d1d5db;min-height:70px;"></textarea>
             <button id="finishBtn" class="record-btn">Finalizar</button>
         </div>
@@ -268,7 +257,7 @@
     });
     {% else %}
     // Lógica de pasos y navegación
-    const steps = ["step1","step2","step3","step4","step5"];
+    const steps = ["step2","step3","step4","step5"];
     let currentStep = 0;
     
     // Función para manejar errores de subida
@@ -316,36 +305,13 @@
             bar.innerHTML += `<div style="width:32px;height:8px;border-radius:4px;margin:0 2px;background:${i<=idx?'#3498db':'#b3c6e0'};"></div>`;
         }
         // Inicializar cámara solo cuando se entra al paso correspondiente
-        if(idx === 1) startMainStream1();
-        if(idx === 2) startMainStream2();
+        if(idx === 0) startMainStream1();
+        if(idx === 1) startMainStream2();
     }
     showStep(0);
     // Navegación entre pasos
-    document.getElementById('nextBtn1').onclick = ()=>{
-        const rfc = document.getElementById('rfc').value.trim().toUpperCase();
-        const rfcRegex = /^([A-ZÑ&]{3,4})(\d{6})([A-Z\d]{3})$/;
-        
-        if(!document.getElementById('nombreCompleto').value.trim()) {
-            alert('Por favor ingresa tu nombre completo.');
-            return;
-        }
-        if(!document.getElementById('nombreEmpresa').value.trim()) {
-            alert('Por favor ingresa el nombre de la empresa.');
-            return;
-        }
-        if(!rfc) {
-            alert('Por favor ingresa tu RFC.');
-            return;
-        }
-        if(!rfcRegex.test(rfc)) {
-            alert('El RFC ingresado no tiene el formato correcto. Debe ser de 13 caracteres para personas físicas o 12 para morales.');
-            return;
-        }
-        
-        showStep(1);
-    };
     document.getElementById('nextBtn4').onclick = ()=>{
-        if(document.getElementById('giroEmpresa').value.trim() && document.getElementById('numEmpleados').value>0) showStep(4);
+        if(document.getElementById('giroEmpresa').value.trim() && document.getElementById('numEmpleados').value>0) showStep(3);
         else alert('Por favor describe el giro de tu empresa y el número de empleados.');
     };
     document.getElementById('finishBtn').onclick = async ()=>{
@@ -367,7 +333,7 @@
                     body: JSON.stringify(datos)
                 });
                 if (response.ok) {
-                    showStep(5);
+                    showStep(4);
                     document.getElementById('finalMsg').style.display = 'block';
                 } else {
                     alert('Error al guardar los datos.');
@@ -454,7 +420,7 @@
                     body: formData
                 });
                 if (response.ok) {
-                    showStep(2);
+                    showStep(1);
                 } else {
                     alert('Error al subir el video.');
                 }
@@ -503,7 +469,7 @@
                     body: formData
                 });
                 if (response.ok) {
-                    showStep(3);
+                    showStep(2);
                 } else {
                     alert('Error al subir el video.');
                 }

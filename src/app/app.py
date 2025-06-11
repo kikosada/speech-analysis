@@ -404,8 +404,10 @@ def cliente_upload():
         if video.filename == '':
             return jsonify({"error": "No se seleccionó ningún archivo"}), 400
 
-        # Guardar el video en Azure Blob Storage
-        video_blob_name = f"{rfc}/video.mp4"
+        # Guardar el video en Azure Blob Storage con su nombre original
+        from werkzeug.utils import secure_filename
+        filename = secure_filename(video.filename)
+        video_blob_name = f"{rfc}/{filename}"
         video_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=video_blob_name)
         video_blob_client.upload_blob(video, overwrite=True)
         print(f"Video guardado en: {video_blob_name}")
