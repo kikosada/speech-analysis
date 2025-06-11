@@ -443,7 +443,7 @@ def cliente_datos():
         print('RFC guardado en sesión:', rfc)
         print('Sesión después de guardar RFC:', dict(session))
         
-        # Guardar datos.json en la carpeta del RFC
+        # Guardar datos.json en la carpeta del RFC (sobrescribir con toda la info final)
         folder_prefix = f"{rfc}/"
         blob_name = folder_prefix + 'datos.json'
         import json
@@ -451,7 +451,7 @@ def cliente_datos():
         datos_bytes = BytesIO(json.dumps(datos, ensure_ascii=False, indent=2).encode('utf-8'))
         blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=blob_name)
         blob_client.upload_blob(datos_bytes, overwrite=True)
-        print(f"datos.json guardado en carpeta RFC: {blob_name}")
+        print(f"datos.json actualizado en carpeta RFC: {blob_name}")
         return jsonify({"success": True})
     except Exception as e:
         print('Excepción en cliente_datos:', e)
