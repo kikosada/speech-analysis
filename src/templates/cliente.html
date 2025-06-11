@@ -278,6 +278,41 @@
     // Lógica de pasos y navegación
     const steps = ["step1","step2","step3","step4","step5"];
     let currentStep = 0;
+    
+    // Función para manejar errores de subida
+    async function handleUploadError(response) {
+        const data = await response.json();
+        if (data.redirect) {
+            window.location.href = data.redirect;
+            return true;
+        }
+        alert(data.error || 'Error al subir el video');
+        return false;
+    }
+    
+    // Modificar la función de subida de video para manejar redirecciones
+    async function uploadVideo(videoBlob, step) {
+        const formData = new FormData();
+        formData.append('main_video', videoBlob, 'presentacion.webm');
+        
+        try {
+            const response = await fetch('/cliente_upload', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!response.ok) {
+                const redirected = await handleUploadError(response);
+                if (redirected) return;
+            }
+            
+            // ... resto del código de subida ...
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error al subir el video');
+        }
+    }
+    
     function showStep(idx) {
         steps.forEach((id,i)=>{
             document.getElementById(id).style.display = (i===idx)?'block':'none';

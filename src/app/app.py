@@ -369,6 +369,12 @@ def cliente_upload():
     print('Usuario actual:', current_user)
     print('¿Está autenticado?:', current_user.is_authenticated)
     print('Sesión actual:', dict(session))
+    
+    # Verificar si el usuario ya tiene RFC en la sesión
+    if not session.get('rfc'):
+        print('No hay RFC en la sesión, redirigiendo al formulario inicial')
+        return jsonify({"error": "Por favor, completa tus datos iniciales primero", "redirect": "/cliente"}), 400
+    
     try:
         azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
         azure_account_key = os.environ.get('AZURE_CLIENTE_ACCOUNT_KEY')
@@ -376,31 +382,9 @@ def cliente_upload():
         connect_str = f"DefaultEndpointsProtocol=https;AccountName={azure_account_name};AccountKey={azure_account_key};EndpointSuffix=core.windows.net"
         blob_service_client = BlobServiceClient.from_connection_string(connect_str)
 
-        # Obtener el RFC del usuario desde la sesión o desde datos.json en la carpeta del RFC
+        # Obtener el RFC del usuario desde la sesión
         rfc = session.get('rfc')
         print('RFC en sesión:', rfc)
-        if not rfc:
-            # Buscar el RFC en datos.json de la carpeta del RFC
-            user_email = getattr(current_user, 'email', None) or session.get('email', 'default')
-            print('Email del usuario:', user_email)
-            # Buscar todos los blobs y tratar de encontrar el RFC correcto
-            print('Buscando RFC en blobs...')
-            container_client = blob_service_client.get_container_client(azure_container_name)
-            blobs = list(container_client.list_blobs())
-            rfc_found = None
-            for blob in blobs:
-                if blob.name.endswith('datos.json'):
-                    datos_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=blob.name)
-                    try:
-                        datos_json = datos_blob_client.download_blob().readall()
-                        datos_data = json.loads(datos_json.decode("utf-8"))
-                        if datos_data.get('email', '').lower() == user_email.lower():
-                            rfc_found = datos_data.get('rfc')
-                            print('RFC encontrado en blob:', rfc_found)
-                            break
-                    except Exception as e:
-                        print('Error leyendo blob:', blob.name, e)
-            rfc = rfc_found
         if not rfc:
             print('No se encontró RFC para el usuario')
             return jsonify({"error": "No se encontró RFC para el usuario. Por favor, completa tus datos primero."}), 400
