@@ -354,7 +354,13 @@ def cliente():
     print('Usuario actual:', current_user)
     print('¿Está autenticado?:', current_user.is_authenticated)
     print('Sesión actual:', dict(session))
-    return render_template('cliente.html')
+    
+    # Verificar si el usuario ya tiene RFC en la sesión
+    if not session.get('rfc'):
+        print('No hay RFC en la sesión, redirigiendo al formulario inicial')
+        return render_template('cliente.html', show_form=True)
+    
+    return render_template('cliente.html', show_form=False)
 
 @app.route('/cliente_upload', methods=['POST'])
 @login_required
