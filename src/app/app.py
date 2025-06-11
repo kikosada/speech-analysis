@@ -410,7 +410,6 @@ def cliente_upload():
         if filename == 'presentacion.webm':
             import tempfile
             import subprocess
-            import os
             from io import BytesIO
             # Guardar temporalmente el video
             with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as tmp:
