@@ -385,7 +385,7 @@ def cliente_upload():
         if not rfc:
             return jsonify({"error": "No se encontró el RFC en la sesión"}), 400
 
-        # Verificar que existe el archivo datos.json
+        # Intentar leer datos.json, pero no fallar si no existe
         print('Intentando leer datos del blob:', f"{rfc}/datos.json")
         try:
             blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=f"{rfc}/datos.json")
@@ -394,8 +394,8 @@ def cliente_upload():
             datos = json.loads(datos_json)
             print('Datos procesados:', datos)
         except Exception as e:
-            print('Error al leer datos.json:', str(e))
-            return jsonify({"error": "No se encontró el archivo de datos"}), 400
+            print('Warning: datos.json no existe o no se pudo leer:', str(e))
+            datos = None
 
         # Procesar el video (aceptar 'video' o 'main_video')
         video = request.files.get('video') or request.files.get('main_video')
