@@ -411,7 +411,7 @@ def cliente_upload():
             import tempfile
             import subprocess
             from io import BytesIO
-            from app.transcribe import analyze_company_knowledge
+            from app.azure_transcriber import AzureTranscriber
             # Guardar temporalmente el video
             with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as tmp:
                 video.stream.seek(0)
@@ -424,20 +424,15 @@ def cliente_upload():
                     'ffmpeg', '-y', '-i', tmp_path, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
                 ], check=True)
                 print('Audio extraído a:', audio_wav)
-                # Transcribir
-                from azure.cognitiveservices.speech import SpeechConfig, AudioConfig, SpeechRecognizer
-                speech_key = os.environ.get('AZURE_SPEECH_KEY')
-                service_region = os.environ.get('AZURE_SPEECH_REGION', 'eastus')
-                speech_config = SpeechConfig(subscription=speech_key, region=service_region)
-                speech_config.speech_recognition_language = 'es-ES'
-                audio_config = AudioConfig(filename=audio_wav)
-                recognizer = SpeechRecognizer(speech_config=speech_config, audio_config=audio_config)
-                print('Iniciando transcripción...')
-                result = recognizer.recognize_once()
-                transcript = result.text
-                print('Transcripción:', transcript)
-                # Calcular score y feedback con la rúbrica avanzada
-                scores, feedback = analyze_company_knowledge(transcript)
+                # Transcribir usando AzureTranscriber (transcripción completa)
+                transcriber = AzureTranscriber(
+                    speech_key=os.environ.get('AZURE_SPEECH_KEY'),
+                    service_region=os.environ.get('AZURE_SPEECH_REGION', 'eastus')
+                )
+                result = transcriber.transcribe(audio_wav)
+                transcript = result['text']
+                scores = result['scores']
+                feedback = result['feedback']
                 # Guardar la transcripción como .txt
                 transcript_bytes = BytesIO(transcript.encode('utf-8'))
                 transcript_blob = f"{rfc}/presentacion.txt"

@@ -274,8 +274,8 @@
                     body: JSON.stringify(datos)
                 });
                 if (response.ok) {
+                    document.getElementById('finalMsg').innerHTML = `<b>¡Gracias por llenar la encuesta!</b><br>${dataScore.mensaje}`;
                     showStep(5);
-                    document.getElementById('finalMsg').style.display = 'block';
                 } else {
                     alert('Error al guardar los datos.');
                 }
