@@ -204,13 +204,16 @@
             <textarea id="objetivoCrediclub" placeholder="¿Cuál es tu objetivo principal al usar nuestra plataforma?" required style="width:100%;padding:0.7em;margin:1em 0 0.5em 0;font-size:1.1em;border-radius:8px;border:1.5px solid #d1d5db;min-height:70px;"></textarea>
             <button id="finishBtn" class="record-btn">Finalizar</button>
         </div>
-        <div id="finalMsg" style="display:none;text-align:center;font-size:1.2em;color:#1976d2;margin-top:2em;">
-            ¡Gracias! Tus respuestas han sido enviadas correctamente.
+        <!-- Paso 6: Mensaje final -->
+        <div id="step6" class="step-block" style="display:none;">
+            <div id="finalMsg" style="text-align:center;font-size:1.2em;color:#1976d2;margin-top:2em;">
+                ¡Gracias! Tus respuestas han sido enviadas correctamente.
+            </div>
         </div>
     </div>
     <script>
     // Lógica de pasos y navegación
-    const steps = ["step1","step2","step3","step4","step5"];
+    const steps = ["step1","step2","step3","step4","step5","step6"];
     let currentStep = 0;
     function showStep(idx) {
         steps.forEach((id,i)=>{
@@ -288,7 +291,7 @@
                                     el.innerHTML = '<b>¡Gracias por llenar la encuesta!</b><br>¡Tus respuestas han sido enviadas correctamente.';
                                 }
                             }, 500);
-                            showStep(5);
+                            showStep(6);
                         } else {
                             document.getElementById('finalMsg').innerHTML = '<b>¡Gracias por llenar la encuesta!</b><br>¡Tus respuestas han sido enviadas correctamente.';
                             document.getElementById('finalMsg').style.display = 'block';
@@ -299,7 +302,7 @@
                                     el.innerHTML = '<b>¡Gracias por llenar la encuesta!</b><br>¡Tus respuestas han sido enviadas correctamente.';
                                 }
                             }, 500);
-                            showStep(5);
+                            showStep(6);
                         }
                     } catch (e) {
                         document.getElementById('finalMsg').innerHTML = '<b>¡Gracias por llenar la encuesta!</b><br>¡Tus respuestas han sido enviadas correctamente.';
@@ -311,7 +314,7 @@
                                 el.innerHTML = '<b>¡Gracias por llenar la encuesta!</b><br>¡Tus respuestas han sido enviadas correctamente.';
                             }
                         }, 500);
-                        showStep(5);
+                        showStep(6);
                     }
                 } else {
                     alert('Error al guardar los datos.');
