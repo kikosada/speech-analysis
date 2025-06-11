@@ -280,13 +280,16 @@
                         const dataScore = await resScore.json();
                         if (resScore.ok) {
                             document.getElementById('finalMsg').innerHTML = `<b>¡Gracias por llenar la encuesta!</b><br>${dataScore.mensaje}`;
+                            document.getElementById('finalMsg').style.display = 'block';
                             showStep(5);
                         } else {
                             document.getElementById('finalMsg').innerHTML = '<b>¡Gracias por llenar la encuesta!</b><br>¡Tus respuestas han sido enviadas correctamente.';
+                            document.getElementById('finalMsg').style.display = 'block';
                             showStep(5);
                         }
                     } catch (e) {
                         document.getElementById('finalMsg').innerHTML = '<b>¡Gracias por llenar la encuesta!</b><br>¡Tus respuestas han sido enviadas correctamente.';
+                        document.getElementById('finalMsg').style.display = 'block';
                         showStep(5);
                     }
                 } else {
