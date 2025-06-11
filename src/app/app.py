@@ -397,11 +397,10 @@ def cliente_upload():
             print('Error al leer datos.json:', str(e))
             return jsonify({"error": "No se encontró el archivo de datos"}), 400
 
-        # Procesar el video
-        if 'video' not in request.files:
+        # Procesar el video (aceptar 'video' o 'main_video')
+        video = request.files.get('video') or request.files.get('main_video')
+        if not video:
             return jsonify({"error": "No se envió ningún archivo"}), 400
-        
-        video = request.files['video']
         if video.filename == '':
             return jsonify({"error": "No se seleccionó ningún archivo"}), 400
 
