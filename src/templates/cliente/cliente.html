@@ -281,15 +281,36 @@
                         if (resScore.ok) {
                             document.getElementById('finalMsg').innerHTML = `<b>¡Gracias por llenar la encuesta!</b><br>${dataScore.mensaje}`;
                             document.getElementById('finalMsg').style.display = 'block';
+                            setTimeout(() => {
+                                const el = document.getElementById('finalMsg');
+                                el.style.display = 'block';
+                                if (!el.innerHTML.trim()) {
+                                    el.innerHTML = '<b>¡Gracias por llenar la encuesta!</b><br>¡Tus respuestas han sido enviadas correctamente.';
+                                }
+                            }, 500);
                             showStep(5);
                         } else {
                             document.getElementById('finalMsg').innerHTML = '<b>¡Gracias por llenar la encuesta!</b><br>¡Tus respuestas han sido enviadas correctamente.';
                             document.getElementById('finalMsg').style.display = 'block';
+                            setTimeout(() => {
+                                const el = document.getElementById('finalMsg');
+                                el.style.display = 'block';
+                                if (!el.innerHTML.trim()) {
+                                    el.innerHTML = '<b>¡Gracias por llenar la encuesta!</b><br>¡Tus respuestas han sido enviadas correctamente.';
+                                }
+                            }, 500);
                             showStep(5);
                         }
                     } catch (e) {
                         document.getElementById('finalMsg').innerHTML = '<b>¡Gracias por llenar la encuesta!</b><br>¡Tus respuestas han sido enviadas correctamente.';
                         document.getElementById('finalMsg').style.display = 'block';
+                        setTimeout(() => {
+                            const el = document.getElementById('finalMsg');
+                            el.style.display = 'block';
+                            if (!el.innerHTML.trim()) {
+                                el.innerHTML = '<b>¡Gracias por llenar la encuesta!</b><br>¡Tus respuestas han sido enviadas correctamente.';
+                            }
+                        }, 500);
                         showStep(5);
                     }
                 } else {
