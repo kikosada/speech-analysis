@@ -256,14 +256,14 @@
                         const resScore = await fetch('/cliente_score');
                         const dataScore = await resScore.json();
                         if (resScore.ok) {
-                            document.getElementById('finalMsg').textContent = dataScore.mensaje;
+                            document.getElementById('finalMsg').innerHTML = `<b>¡Gracias por llenar la encuesta!</b><br>${dataScore.mensaje}`;
                             showStep(5);
                         } else {
-                            document.getElementById('finalMsg').textContent = '¡Gracias! Tus respuestas han sido enviadas correctamente.';
+                            document.getElementById('finalMsg').innerHTML = '<b>¡Gracias por llenar la encuesta!</b><br>¡Tus respuestas han sido enviadas correctamente.';
                             showStep(5);
                         }
                     } catch (e) {
-                        document.getElementById('finalMsg').textContent = '¡Gracias! Tus respuestas han sido enviadas correctamente.';
+                        document.getElementById('finalMsg').innerHTML = '<b>¡Gracias por llenar la encuesta!</b><br>¡Tus respuestas han sido enviadas correctamente.';
                         showStep(5);
                     }
                 } else {

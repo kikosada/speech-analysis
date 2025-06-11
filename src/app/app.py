@@ -411,6 +411,7 @@ def cliente_upload():
             import tempfile
             import subprocess
             from io import BytesIO
+            from app.transcribe import analyze_company_knowledge
             # Guardar temporalmente el video
             with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as tmp:
                 video.stream.seek(0)
@@ -428,28 +429,28 @@ def cliente_upload():
                 speech_key = os.environ.get('AZURE_SPEECH_KEY')
                 service_region = os.environ.get('AZURE_SPEECH_REGION', 'eastus')
                 speech_config = SpeechConfig(subscription=speech_key, region=service_region)
+                speech_config.speech_recognition_language = 'es-ES'
                 audio_config = AudioConfig(filename=audio_wav)
                 recognizer = SpeechRecognizer(speech_config=speech_config, audio_config=audio_config)
                 print('Iniciando transcripción...')
                 result = recognizer.recognize_once()
                 transcript = result.text
                 print('Transcripción:', transcript)
-                # Calcular score simple
-                score = 1
-                texto = transcript.lower()
-                if any(pal in texto for pal in ['empresa', 'negocio', 'compañía']): score += 2
-                if any(pal in texto for pal in ['servicio', 'producto', 'ofrecemos', 'vendemos']): score += 2
-                if any(pal in texto for pal in ['mision', 'visión', 'valores']): score += 2
-                if len(transcript.split()) > 30: score += 2
-                if score > 10: score = 10
+                # Calcular score y feedback con la rúbrica avanzada
+                scores, feedback = analyze_company_knowledge(transcript)
                 # Guardar la transcripción como .txt
                 transcript_bytes = BytesIO(transcript.encode('utf-8'))
                 transcript_blob = f"{rfc}/presentacion.txt"
                 blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=transcript_blob)
                 blob_client.upload_blob(transcript_bytes, overwrite=True)
                 print('Transcripción subida como .txt:', transcript_blob)
-                # Guardar score y transcripción como .json
-                presentacion_json = BytesIO(json.dumps({"score": score, "transcripcion": transcript}, ensure_ascii=False, indent=2).encode('utf-8'))
+                # Guardar score, scores, feedback y transcripción como .json
+                presentacion_json = BytesIO(json.dumps({
+                    "score": scores['overall'],
+                    "scores": scores,
+                    "feedback": feedback,
+                    "transcripcion": transcript
+                }, ensure_ascii=False, indent=2).encode('utf-8'))
                 presentacion_json_blob = f"{rfc}/presentacion.json"
                 blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=presentacion_json_blob)
                 blob_client.upload_blob(presentacion_json, overwrite=True)
