@@ -1,8 +1,8 @@
 # =============================================
 # 1. IMPORTS Y CONFIGURACIÓN INICIAL
 # =============================================
-from flask import Flask, jsonify, request, render_template, redirect, url_for, session, send_from_directory
 import os
+from flask import Flask, jsonify, request, render_template, redirect, url_for, session, send_from_directory
 from app.transcribe import AssemblyAITranscriber as Transcriber
 from werkzeug.utils import secure_filename
 import logging
