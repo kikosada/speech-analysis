@@ -369,7 +369,15 @@ def cliente_upload():
     print('Usuario actual:', current_user)
     print('¿Está autenticado?:', current_user.is_authenticated)
     print('Sesión actual:', dict(session))
-    
+
+    # Inicializar Azure Blob Storage
+    azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
+    azure_account_key = os.environ.get('AZURE_CLIENTE_ACCOUNT_KEY')
+    azure_container_name = os.environ.get('AZURE_CLIENTE_CONTAINER', 'clienteai')
+    connect_str = f"DefaultEndpointsProtocol=https;AccountName={azure_account_name};AccountKey={azure_account_key};EndpointSuffix=core.windows.net"
+    from azure.storage.blob import BlobServiceClient
+    blob_service_client = BlobServiceClient.from_connection_string(connect_str)
+
     try:
         # Obtener RFC de la sesión
         rfc = session.get('rfc')
@@ -382,7 +390,7 @@ def cliente_upload():
         try:
             blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=f"{rfc}/datos.json")
             datos_json = blob_client.download_blob().readall()
-            print('Datos.json descargado:', datos_json)
+            import json
             datos = json.loads(datos_json)
             print('Datos procesados:', datos)
         except Exception as e:
