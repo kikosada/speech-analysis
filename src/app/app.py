@@ -354,13 +354,8 @@ def cliente():
     print('Usuario actual:', current_user)
     print('¿Está autenticado?:', current_user.is_authenticated)
     print('Sesión actual:', dict(session))
-    
-    # Verificar si el usuario ya tiene RFC en la sesión
-    if not session.get('rfc'):
-        print('No hay RFC en la sesión, redirigiendo al formulario inicial')
-        return render_template('cliente.html', show_form=True)
-    
-    return render_template('cliente.html', show_form=False)
+    # Siempre mostrar el wizard de 5 pasos
+    return render_template('cliente.html')
 
 @app.route('/cliente_upload', methods=['POST'])
 @login_required
@@ -640,10 +635,7 @@ def index():
     if current_user.is_authenticated:
         print('Usuario autenticado en /')
         print('RFC en sesión:', session.get('rfc'))
-        if not session.get('rfc'):
-            print('No hay RFC en la sesión, mostrando formulario inicial')
-            return render_template('cliente.html', show_form=True)
-        return render_template('cliente.html')
+        return redirect(url_for('cliente'))
     return redirect(url_for('login_cliente_page'))
 
 if __name__ == '__main__':
