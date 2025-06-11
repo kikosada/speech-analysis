@@ -473,6 +473,10 @@ def cliente_upload():
 @app.route('/cliente_datos', methods=['POST'])
 @login_required
 def cliente_datos():
+    print('Entrando a cliente_datos')
+    print('Usuario actual:', current_user)
+    print('¿Está autenticado?:', current_user.is_authenticated)
+    print('Sesión actual antes de guardar:', dict(session))
     try:
         azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
         azure_account_key = os.environ.get('AZURE_CLIENTE_ACCOUNT_KEY')
@@ -481,9 +485,16 @@ def cliente_datos():
         blob_service_client = BlobServiceClient.from_connection_string(connect_str)
 
         datos = request.get_json()
+        print('Datos recibidos:', datos)
         rfc = datos.get('rfc')
         if not rfc:
             return jsonify({"error": "El RFC es obligatorio"}), 400
+        
+        # Guardar RFC en la sesión
+        session['rfc'] = rfc
+        print('RFC guardado en sesión:', rfc)
+        print('Sesión después de guardar RFC:', dict(session))
+        
         # Guardar datos.json en la carpeta del RFC
         folder_prefix = f"{rfc}/"
         blob_name = folder_prefix + 'datos.json'
@@ -493,7 +504,6 @@ def cliente_datos():
         blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=blob_name)
         blob_client.upload_blob(datos_bytes, overwrite=True)
         print(f"datos.json guardado en carpeta RFC: {blob_name}")
-        session['rfc'] = rfc  # Guardar el RFC en la sesión
         return jsonify({"success": True})
     except Exception as e:
         print('Excepción en cliente_datos:', e)
