@@ -398,6 +398,50 @@
     });
     // Inicializar primer paso al cargar
     window.addEventListener('DOMContentLoaded', () => showStep(0));
+    document.getElementById('nextBtn1').onclick = async () => {
+        const rfc = document.getElementById('rfc').value.trim().toUpperCase();
+        const rfcRegex = /^([A-ZÑ&]{3,4})(\d{6})([A-Z\d]{3})$/;
+        const nombreCompleto = document.getElementById('nombreCompleto').value.trim();
+        const nombreEmpresa = document.getElementById('nombreEmpresa').value.trim();
+        
+        if(!nombreCompleto) {
+            alert('Por favor ingresa tu nombre completo.');
+            return;
+        }
+        if(!nombreEmpresa) {
+            alert('Por favor ingresa el nombre de la empresa.');
+            return;
+        }
+        if(!rfc) {
+            alert('Por favor ingresa tu RFC.');
+            return;
+        }
+        if(!rfcRegex.test(rfc)) {
+            alert('El RFC ingresado no tiene el formato correcto. Debe ser de 13 caracteres para personas físicas o 12 para morales.');
+            return;
+        }
+        // Guardar datos en el backend
+        const datos = {
+            nombreCompleto,
+            nombreEmpresa,
+            rfc
+        };
+        try {
+            const response = await fetch('/cliente_datos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(datos)
+            });
+            if (response.ok) {
+                showStep(1);
+            } else {
+                const data = await response.json();
+                alert(data.error || 'Error al guardar los datos.');
+            }
+        } catch (e) {
+            alert('Error al guardar los datos.');
+        }
+    };
     </script>
 </body>
 </html> 
