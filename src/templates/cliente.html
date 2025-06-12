@@ -252,7 +252,7 @@
         document.getElementById('processingMsg').style.display = 'block';
         document.getElementById('finalMsg').style.display = 'none';
         document.getElementById('scoreDebug').style.display = 'none';
-        document.getElementById('processingMsg').innerHTML = '<span style="color:orange;font-size:1.2em;">[LOG] fetchScoreAndShow ejecutado</span><br>Procesando tu resultado... Por favor espera <span id="countdown">10</span> segundos.';
+        document.getElementById('processingMsg').innerHTML = '<div style="font-size:1.3em;color:#1976d2;font-weight:600;margin-bottom:0.7em;">Realizando análisis, espera unos segundos...</div><div style="font-size:1.1em;color:#1a355e;">Procesando tu resultado... Por favor espera <span id="countdown">10</span> segundos.</div>';
         scoreData = null;
         timerDone = false;
         let countdown = 10;
