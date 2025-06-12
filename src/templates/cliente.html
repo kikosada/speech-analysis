@@ -222,8 +222,9 @@
         </div>
         <!-- Paso 6: Mensaje final -->
         <div id="step6" class="step-block" style="display:none;">
-            <div id="processingMsg" style="text-align:center;font-size:1.3em;color:#1976d2;margin-top:2em;display:block;">
-                DEBUG: Este mensaje debería verse siempre que se muestre el paso 6.
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;margin-top:2em;">
+                <div><span class="spinner"></span><span style="font-size:1.3em;color:#1976d2;font-weight:600;">Realizando análisis, espera unos segundos...</span></div>
+                <div style="font-size:1.1em;color:#1a355e;margin-top:0.7em;">Procesando tu resultado... Por favor espera <span id="countdown">10</span> segundos.</div>
             </div>
             <div id="finalMsg" style="text-align:center;font-size:1.5em;color:#1976d2;margin-top:2em;display:none;"></div>
             <div id="scoreDebug" style="text-align:center;font-size:1.1em;color:red;margin-top:1em;display:none;"></div>
