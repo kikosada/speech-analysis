@@ -259,13 +259,15 @@
         document.getElementById('countdown').innerText = countdown;
         showStep(6);
         // Timer
+        let minWaitDone = false;
+        setTimeout(() => { minWaitDone = true; if (timerDone && scoreData !== null) showFinalMessage(); }, 2000);
         const timer = setInterval(() => {
             countdown--;
             document.getElementById('countdown').innerText = countdown;
             if (countdown <= 0) {
                 clearInterval(timer);
                 timerDone = true;
-                if (scoreData !== null) showFinalMessage();
+                if (minWaitDone && scoreData !== null) showFinalMessage();
             }
         }, 1000);
         // Fetch
@@ -275,16 +277,16 @@
                 const dataScore = await resScore.json();
                 scoreData = dataScore;
                 console.log('Score recibido:', dataScore);
-                if (timerDone) showFinalMessage();
+                if (timerDone && minWaitDone) showFinalMessage();
             } else {
                 scoreData = null;
                 console.log('Error al obtener score');
-                if (timerDone) showFinalMessage();
+                if (timerDone && minWaitDone) showFinalMessage();
             }
         } catch (e) {
             scoreData = null;
             console.log('Excepción al obtener score:', e);
-            if (timerDone) showFinalMessage();
+            if (timerDone && minWaitDone) showFinalMessage();
         }
     }
     document.getElementById('finishBtn').onclick = async ()=>{
