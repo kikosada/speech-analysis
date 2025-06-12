@@ -153,6 +153,21 @@
                 max-width: 400px;
             }
         }
+        .spinner {
+            display: inline-block;
+            width: 32px;
+            height: 32px;
+            border: 4px solid #1976d2;
+            border-top: 4px solid #e3f0ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            vertical-align: middle;
+            margin-right: 16px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -252,7 +267,10 @@
         document.getElementById('processingMsg').style.display = 'block';
         document.getElementById('finalMsg').style.display = 'none';
         document.getElementById('scoreDebug').style.display = 'none';
-        document.getElementById('processingMsg').innerHTML = '<div style="font-size:1.3em;color:#1976d2;font-weight:600;margin-bottom:0.7em;">Realizando análisis, espera unos segundos...</div><div style="font-size:1.1em;color:#1a355e;">Procesando tu resultado... Por favor espera <span id="countdown">10</span> segundos.</div>';
+        document.getElementById('processingMsg').innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;margin-top:2em;">'
+            + '<div><span class="spinner"></span><span style="font-size:1.3em;color:#1976d2;font-weight:600;">Realizando análisis, espera unos segundos...</span></div>'
+            + '<div style="font-size:1.1em;color:#1a355e;margin-top:0.7em;">Procesando tu resultado... Por favor espera <span id="countdown">10</span> segundos.</div>'
+            + '</div>';
         scoreData = null;
         timerDone = false;
         let countdown = 10;
