@@ -222,9 +222,11 @@
         </div>
         <!-- Paso 6: Mensaje final -->
         <div id="step6" class="step-block" style="display:none;">
-            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;margin-top:2em;">
-                <div><span class="spinner"></span><span style="font-size:1.3em;color:#1976d2;font-weight:600;">Realizando análisis, espera unos segundos...</span></div>
-                <div style="font-size:1.1em;color:#1a355e;margin-top:0.7em;">Procesando tu resultado... Por favor espera <span id="countdown">10</span> segundos.</div>
+            <div id="processingMsg" style="display:block;text-align:center;">
+                <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;margin-top:2em;">
+                    <div><span class="spinner"></span><span style="font-size:1.3em;color:#1976d2;font-weight:600;">Realizando análisis, espera unos segundos...</span></div>
+                    <div style="font-size:1.1em;color:#1a355e;margin-top:0.7em;">Procesando tu resultado... Por favor espera <span id="countdown">2</span> segundos.</div>
+                </div>
             </div>
             <div id="finalMsg" style="text-align:center;font-size:1.5em;color:#1976d2;margin-top:2em;display:none;"></div>
             <div id="scoreDebug" style="text-align:center;font-size:1.1em;color:red;margin-top:1em;display:none;"></div>
@@ -264,49 +266,26 @@
         document.getElementById('finalMsg').innerHTML = `<div style=\"font-size:1.5em;color:#1976d2;font-weight:800;margin-bottom:0.5em;\">¡Gracias por llenar la encuesta!</div><div style=\"font-size:1.1em;color:#1a355e;margin-bottom:0.7em;\">${scoreData ? scoreData.mensaje : '<span style=\\\"color:red;\\\">Ocurrió un error al obtener tu resultado.</span>'}</div>`;
     }
     async function fetchScoreAndShow() {
-        console.log('Entró a fetchScoreAndShow');
         document.getElementById('step6').style.display = 'block';
         document.getElementById('processingMsg').style.display = 'block';
         document.getElementById('finalMsg').style.display = 'none';
         document.getElementById('scoreDebug').style.display = 'none';
-        document.getElementById('processingMsg').innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;margin-top:2em;">'
-            + '<div><span class="spinner"></span><span style="font-size:1.3em;color:#1976d2;font-weight:600;">Realizando análisis, espera unos segundos...</span></div>'
-            + '<div style="font-size:1.1em;color:#1a355e;margin-top:0.7em;">Procesando tu resultado... Por favor espera <span id="countdown">10</span> segundos.</div>'
-            + '</div>';
-        scoreData = null;
-        timerDone = false;
-        let countdown = 10;
-        document.getElementById('countdown').innerText = countdown;
-        showStep(6);
-        // Timer
         let minWaitDone = false;
-        setTimeout(() => { minWaitDone = true; if (timerDone && scoreData !== null) showFinalMessage(); }, 2000);
-        const timer = setInterval(() => {
-            countdown--;
-            document.getElementById('countdown').innerText = countdown;
-            if (countdown <= 0) {
-                clearInterval(timer);
-                timerDone = true;
-                if (minWaitDone && scoreData !== null) showFinalMessage();
-            }
-        }, 1000);
+        setTimeout(() => { minWaitDone = true; if (scoreData !== null) showFinalMessage(); }, 2000);
         // Fetch
         try {
             const resScore = await fetch('/cliente_score');
             if (resScore.ok) {
                 const dataScore = await resScore.json();
                 scoreData = dataScore;
-                console.log('Score recibido:', dataScore);
-                if (timerDone && minWaitDone) showFinalMessage();
+                if (minWaitDone) showFinalMessage();
             } else {
                 scoreData = null;
-                console.log('Error al obtener score');
-                if (timerDone && minWaitDone) showFinalMessage();
+                if (minWaitDone) showFinalMessage();
             }
         } catch (e) {
             scoreData = null;
-            console.log('Excepción al obtener score:', e);
-            if (timerDone && minWaitDone) showFinalMessage();
+            if (minWaitDone) showFinalMessage();
         }
     }
     document.getElementById('finishBtn').onclick = async ()=>{
