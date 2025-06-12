@@ -244,7 +244,7 @@
         document.getElementById('finalMsg').style.display = 'block';
         document.getElementById('scoreDebug').style.display = 'none';
         document.getElementById('processingMsg').style.display = 'none';
-        document.getElementById('finalMsg').innerHTML = `<div style="font-size:2.1em;color:#1976d2;font-weight:800;margin-bottom:0.5em;">¡Gracias por llenar la encuesta!</div><div style="font-size:1.3em;color:#1a355e;margin-bottom:0.7em;">${scoreData ? scoreData.mensaje : '<span style=\"color:red;\">Ocurrió un error al obtener tu resultado.</span>'}</div>`;
+        document.getElementById('finalMsg').innerHTML = `<div style=\"font-size:1.5em;color:#1976d2;font-weight:800;margin-bottom:0.5em;\">¡Gracias por llenar la encuesta!</div><div style=\"font-size:1.1em;color:#1a355e;margin-bottom:0.7em;\">${scoreData ? scoreData.mensaje : '<span style=\\\"color:red;\\\">Ocurrió un error al obtener tu resultado.</span>'}</div>`;
     }
     async function fetchScoreAndShow() {
         console.log('Entró a fetchScoreAndShow');
