@@ -311,6 +311,7 @@
     }
     document.getElementById('finishBtn').onclick = async ()=>{
         if(document.getElementById('objetivoCrediclub').value.trim()){
+            showStep(6); // Mostrar paso 6 inmediatamente
             // Recolectar todos los datos
             const datos = {
                 nombreCompleto: document.getElementById('nombreCompleto').value.trim(),
