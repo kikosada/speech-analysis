@@ -240,18 +240,22 @@
     let scoreData = null;
     let timerDone = false;
     function showFinalMessage() {
+        console.log('Entró a showFinalMessage');
+        document.getElementById('finalMsg').innerHTML = '<span style="color:green;font-size:1.2em;">[LOG] showFinalMessage ejecutado</span>';
         document.getElementById('processingMsg').style.display = 'none';
         document.getElementById('finalMsg').style.display = 'block';
         document.getElementById('scoreDebug').style.display = 'block';
         if (scoreData) {
-            document.getElementById('finalMsg').innerHTML = `<b>¡Gracias por llenar la encuesta!</b><br>${scoreData.mensaje}`;
+            document.getElementById('finalMsg').innerHTML += `<br><b>¡Gracias por llenar la encuesta!</b><br>${scoreData.mensaje}`;
             document.getElementById('scoreDebug').innerHTML = `Score recibido: <b>${scoreData.score ?? 'N/A'}</b>`;
         } else {
-            document.getElementById('finalMsg').innerHTML = '<b>¡Gracias por llenar la encuesta!</b><br><span style="color:red;">ERROR: No se pudo obtener el mensaje personalizado del backend.</span>';
+            document.getElementById('finalMsg').innerHTML += '<br><b>¡Gracias por llenar la encuesta!</b><br><span style="color:red;">ERROR: No se pudo obtener el mensaje personalizado del backend.</span>';
             document.getElementById('scoreDebug').innerHTML = '';
         }
     }
     async function fetchScoreAndShow() {
+        console.log('Entró a fetchScoreAndShow');
+        document.getElementById('processingMsg').innerHTML = '<span style="color:orange;font-size:1.2em;">[LOG] fetchScoreAndShow ejecutado</span><br>Procesando tu resultado... Por favor espera <span id="countdown">10</span> segundos.';
         scoreData = null;
         timerDone = false;
         let countdown = 10;
@@ -276,13 +280,16 @@
             if (resScore.ok) {
                 const dataScore = await resScore.json();
                 scoreData = dataScore;
+                console.log('Score recibido:', dataScore);
                 if (timerDone) showFinalMessage();
             } else {
                 scoreData = null;
+                console.log('Error al obtener score');
                 if (timerDone) showFinalMessage();
             }
         } catch (e) {
             scoreData = null;
+            console.log('Excepción al obtener score:', e);
             if (timerDone) showFinalMessage();
         }
     }
