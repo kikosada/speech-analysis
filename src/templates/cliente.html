@@ -241,10 +241,11 @@
     let timerDone = false;
     function showFinalMessage() {
         console.log('Entró a showFinalMessage');
-        document.getElementById('finalMsg').innerHTML = '<span style="color:green;font-size:1.2em;">[LOG] showFinalMessage ejecutado</span>';
-        document.getElementById('processingMsg').style.display = 'none';
+        document.getElementById('step6').style.display = 'block';
         document.getElementById('finalMsg').style.display = 'block';
         document.getElementById('scoreDebug').style.display = 'block';
+        document.getElementById('processingMsg').style.display = 'none';
+        document.getElementById('finalMsg').innerHTML = '<span style="color:green;font-size:1.2em;">[LOG] showFinalMessage ejecutado</span>';
         if (scoreData) {
             document.getElementById('finalMsg').innerHTML += `<br><b>¡Gracias por llenar la encuesta!</b><br>${scoreData.mensaje}`;
             document.getElementById('scoreDebug').innerHTML = `Score recibido: <b>${scoreData.score ?? 'N/A'}</b>`;
