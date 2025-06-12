@@ -240,19 +240,11 @@
     let scoreData = null;
     let timerDone = false;
     function showFinalMessage() {
-        console.log('Entró a showFinalMessage');
         document.getElementById('step6').style.display = 'block';
         document.getElementById('finalMsg').style.display = 'block';
-        document.getElementById('scoreDebug').style.display = 'block';
+        document.getElementById('scoreDebug').style.display = 'none';
         document.getElementById('processingMsg').style.display = 'none';
-        document.getElementById('finalMsg').innerHTML = '<span style="color:green;font-size:1.2em;">[LOG] showFinalMessage ejecutado</span>';
-        if (scoreData) {
-            document.getElementById('finalMsg').innerHTML += `<br><b>¡Gracias por llenar la encuesta!</b><br>${scoreData.mensaje}`;
-            document.getElementById('scoreDebug').innerHTML = `Score recibido: <b>${scoreData.score ?? 'N/A'}</b>`;
-        } else {
-            document.getElementById('finalMsg').innerHTML += '<br><b>¡Gracias por llenar la encuesta!</b><br><span style="color:red;">ERROR: No se pudo obtener el mensaje personalizado del backend.</span>';
-            document.getElementById('scoreDebug').innerHTML = '';
-        }
+        document.getElementById('finalMsg').innerHTML = `<div style="font-size:2.1em;color:#1976d2;font-weight:800;margin-bottom:0.5em;">¡Gracias por llenar la encuesta!</div><div style="font-size:1.3em;color:#1a355e;margin-bottom:0.7em;">${scoreData ? scoreData.mensaje : '<span style=\"color:red;\">Ocurrió un error al obtener tu resultado.</span>'}</div>`;
     }
     async function fetchScoreAndShow() {
         console.log('Entró a fetchScoreAndShow');
