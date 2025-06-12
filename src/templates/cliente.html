@@ -207,9 +207,10 @@
         </div>
         <!-- Paso 6: Mensaje final -->
         <div id="step6" class="step-block" style="display:none;">
-            <div id="finalMsg" style="text-align:center;font-size:1.2em;color:#1976d2;margin-top:2em;">
-                ¡Gracias! Tus respuestas han sido enviadas correctamente.
+            <div id="finalMsg" style="text-align:center;font-size:2em;color:#1976d2;margin-top:2em;">
+                DEBUG: Esperando mensaje del backend...
             </div>
+            <div id="scoreDebug" style="text-align:center;font-size:1.5em;color:red;margin-top:1em;"></div>
         </div>
     </div>
     <script>
@@ -261,14 +262,17 @@
                         const dataScore = await resScore.json();
                         if (resScore.ok) {
                             document.getElementById('finalMsg').innerHTML = `<b>¡Gracias por llenar la encuesta!</b><br>${dataScore.mensaje}`;
-                            showStep(5);
+                            document.getElementById('scoreDebug').innerHTML = `Score recibido: <b>${dataScore.score ?? 'N/A'}</b>`;
+                            showStep(6);
                         } else {
-                            document.getElementById('finalMsg').innerHTML = '<b>¡Gracias por llenar la encuesta!</b><br>¡Tus respuestas han sido enviadas correctamente.';
-                            showStep(5);
+                            document.getElementById('finalMsg').innerHTML = '<b>¡Gracias por llenar la encuesta!</b><br><span style="color:red;">ERROR: No se pudo obtener el mensaje personalizado del backend.</span>';
+                            document.getElementById('scoreDebug').innerHTML = '';
+                            showStep(6);
                         }
                     } catch (e) {
-                        document.getElementById('finalMsg').innerHTML = '<b>¡Gracias por llenar la encuesta!</b><br>¡Tus respuestas han sido enviadas correctamente.';
-                        showStep(5);
+                        document.getElementById('finalMsg').innerHTML = '<b>¡Gracias por llenar la encuesta!</b><br><span style="color:red;">ERROR: No se pudo obtener el mensaje personalizado del backend.</span>';
+                        document.getElementById('scoreDebug').innerHTML = '';
+                        showStep(6);
                     }
                 } else {
                     alert('Error al guardar los datos.');
