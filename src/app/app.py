@@ -393,77 +393,81 @@ def cliente_upload():
         video_blob_client.upload_blob(video, overwrite=True)
         print(f"Video guardado en: {video_blob_name}")
 
-        # Crear status.json con estado 'processing'
-        import json
-        from io import BytesIO
-        status_blob = f"{rfc}/status.json"
-        status_data = BytesIO(json.dumps({"status": "processing"}, ensure_ascii=False).encode('utf-8'))
-        status_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=status_blob)
-        status_blob_client.upload_blob(status_data, overwrite=True)
+        # Solo procesar y transcribir si el archivo es 'presentacion.webm'
+        if filename == 'presentacion.webm':
+            # Crear status.json con estado 'processing'
+            import json
+            from io import BytesIO
+            status_blob = f"{rfc}/status.json"
+            status_data = BytesIO(json.dumps({"status": "processing"}, ensure_ascii=False).encode('utf-8'))
+            status_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=status_blob)
+            status_blob_client.upload_blob(status_data, overwrite=True)
 
-        # Procesamiento asíncrono en thread
-        def procesar_video_async(rfc, filename):
-            import tempfile
-            import subprocess
-            from app.azure_transcriber import AzureTranscriber
-            try:
-                # Descargar el video de Azure a un archivo temporal
-                with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as tmp:
-                    video_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=f"{rfc}/{filename}")
-                    tmp.write(video_blob_client.download_blob().readall())
-                    tmp_path = tmp.name
-                audio_wav = tmp_path + '.wav'
-                # Ejecutar ffmpeg y capturar salida
-                ffmpeg_proc = subprocess.run([
-                    'ffmpeg', '-y', '-i', tmp_path, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
-                ], capture_output=True, text=True)
-                print('FFMPEG STDOUT:', ffmpeg_proc.stdout)
-                print('FFMPEG STDERR:', ffmpeg_proc.stderr)
-                print('Audio extraído a:', audio_wav)
-                # Subir el .wav a Azure para depuración
-                with open(audio_wav, 'rb') as wavfile:
-                    wav_blob = f"{rfc}/presentacion.wav"
-                    wav_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=wav_blob)
-                    wav_blob_client.upload_blob(wavfile, overwrite=True)
-                transcriber = AzureTranscriber(
-                    speech_key=os.environ.get('AZURE_SPEECH_KEY'),
-                    service_region=os.environ.get('AZURE_SPEECH_REGION', 'eastus')
-                )
-                result = transcriber.transcribe(audio_wav)
-                transcript = result['text']
-                scores = result['scores']
-                feedback = result['feedback']
-                # Guardar la transcripción como .txt
-                transcript_bytes = BytesIO(transcript.encode('utf-8'))
-                transcript_blob = f"{rfc}/presentacion.txt"
-                blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=transcript_blob)
-                blob_client.upload_blob(transcript_bytes, overwrite=True)
-                # Guardar score, scores, feedback y transcripción como .json
-                presentacion_json = BytesIO(json.dumps({
-                    "score": scores['overall'],
-                    "scores": scores,
-                    "feedback": feedback,
-                    "transcripcion": transcript
-                }, ensure_ascii=False, indent=2).encode('utf-8'))
-                presentacion_json_blob = f"{rfc}/presentacion.json"
-                blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=presentacion_json_blob)
-                blob_client.upload_blob(presentacion_json, overwrite=True)
-                print('Transcripción y score subidos como .json:', presentacion_json_blob)
-                # Actualizar status.json a 'done'
-                status_done = BytesIO(json.dumps({"status": "done"}, ensure_ascii=False).encode('utf-8'))
-                status_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=status_blob)
-                status_blob_client.upload_blob(status_done, overwrite=True)
-            except Exception as e:
-                print(f"Error en procesamiento asíncrono: {e}")
-                # Actualizar status.json a 'error'
-                status_error = BytesIO(json.dumps({"status": "error", "error": str(e)}, ensure_ascii=False).encode('utf-8'))
-                status_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=status_blob)
-                status_blob_client.upload_blob(status_error, overwrite=True)
+            # Procesamiento asíncrono en thread
+            def procesar_video_async(rfc, filename):
+                import tempfile
+                import subprocess
+                from app.azure_transcriber import AzureTranscriber
+                try:
+                    # Descargar el video de Azure a un archivo temporal
+                    with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as tmp:
+                        video_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=f"{rfc}/{filename}")
+                        tmp.write(video_blob_client.download_blob().readall())
+                        tmp_path = tmp.name
+                    audio_wav = tmp_path + '.wav'
+                    # Ejecutar ffmpeg y capturar salida
+                    ffmpeg_proc = subprocess.run([
+                        'ffmpeg', '-y', '-i', tmp_path, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
+                    ], capture_output=True, text=True)
+                    print('FFMPEG STDOUT:', ffmpeg_proc.stdout)
+                    print('FFMPEG STDERR:', ffmpeg_proc.stderr)
+                    print('Audio extraído a:', audio_wav)
+                    # Subir el .wav a Azure para depuración
+                    with open(audio_wav, 'rb') as wavfile:
+                        wav_blob = f"{rfc}/presentacion.wav"
+                        wav_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=wav_blob)
+                        wav_blob_client.upload_blob(wavfile, overwrite=True)
+                    transcriber = AzureTranscriber(
+                        speech_key=os.environ.get('AZURE_SPEECH_KEY'),
+                        service_region=os.environ.get('AZURE_SPEECH_REGION', 'eastus')
+                    )
+                    result = transcriber.transcribe(audio_wav)
+                    transcript = result['text']
+                    scores = result['scores']
+                    feedback = result['feedback']
+                    # Guardar la transcripción como .txt
+                    transcript_bytes = BytesIO(transcript.encode('utf-8'))
+                    transcript_blob = f"{rfc}/presentacion.txt"
+                    blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=transcript_blob)
+                    blob_client.upload_blob(transcript_bytes, overwrite=True)
+                    # Guardar score, scores, feedback y transcripción como .json
+                    presentacion_json = BytesIO(json.dumps({
+                        "score": scores['overall'],
+                        "scores": scores,
+                        "feedback": feedback,
+                        "transcripcion": transcript
+                    }, ensure_ascii=False, indent=2).encode('utf-8'))
+                    presentacion_json_blob = f"{rfc}/presentacion.json"
+                    blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=presentacion_json_blob)
+                    blob_client.upload_blob(presentacion_json, overwrite=True)
+                    print('Transcripción y score subidos como .json:', presentacion_json_blob)
+                    # Actualizar status.json a 'done'
+                    status_done = BytesIO(json.dumps({"status": "done"}, ensure_ascii=False).encode('utf-8'))
+                    status_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=status_blob)
+                    status_blob_client.upload_blob(status_done, overwrite=True)
+                except Exception as e:
+                    print(f"Error en procesamiento asíncrono: {e}")
+                    # Actualizar status.json a 'error'
+                    status_error = BytesIO(json.dumps({"status": "error", "error": str(e)}, ensure_ascii=False).encode('utf-8'))
+                    status_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=status_blob)
+                    status_blob_client.upload_blob(status_error, overwrite=True)
 
-        thread = threading.Thread(target=procesar_video_async, args=(rfc, filename))
-        thread.start()
-
-        return jsonify({"success": True, "message": "Video subido correctamente. El análisis estará listo en unos minutos."})
+            thread = threading.Thread(target=procesar_video_async, args=(rfc, filename))
+            thread.start()
+            return jsonify({"success": True, "message": "Video subido correctamente. El análisis estará listo en unos minutos."})
+        else:
+            # Si no es presentacion.webm, solo se sube el video sin procesar
+            return jsonify({"success": True, "message": "Video subido correctamente."})
 
     except Exception as e:
         print('Error en cliente_upload:', str(e))
