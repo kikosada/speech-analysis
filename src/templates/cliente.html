@@ -406,7 +406,11 @@
         if (!recording1) {
             mainChunks1 = [];
             if (mainStream1) {
-                mainRecorder1 = new MediaRecorder(mainStream1, { mimeType: 'video/webm;codecs=vp8,opus' });
+                mainRecorder1 = new MediaRecorder(mainStream1, {
+                    mimeType: 'video/webm;codecs=vp8,opus',
+                    videoBitsPerSecond: 250000, // 250 kbps
+                    audioBitsPerSecond: 64000   // 64 kbps
+                });
                 mainRecorder1.ondataavailable = e => { if (e.data.size > 0) mainChunks1.push(e.data); };
                 mainRecorder1.start(1000);
             }
@@ -489,7 +493,11 @@
         if (!recording2) {
             mainChunks2 = [];
             if (mainStream2) {
-                mainRecorder2 = new MediaRecorder(mainStream2, { mimeType: 'video/webm;codecs=vp8,opus' });
+                mainRecorder2 = new MediaRecorder(mainStream2, {
+                    mimeType: 'video/webm;codecs=vp8,opus',
+                    videoBitsPerSecond: 250000, // 250 kbps
+                    audioBitsPerSecond: 64000   // 64 kbps
+                });
                 mainRecorder2.ondataavailable = e => { if (e.data.size > 0) mainChunks2.push(e.data); };
                 mainRecorder2.start(1000);
             }
