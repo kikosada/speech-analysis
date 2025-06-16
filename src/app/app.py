@@ -25,6 +25,7 @@ from flask_jwt_extended import JWTManager, create_access_token, jwt_required, ge
 from flask_session import Session
 from sqlalchemy import create_engine
 from flask_sqlalchemy import SQLAlchemy
+import threading
 
 app = Flask(__name__,
     template_folder='../templates',
@@ -365,7 +366,6 @@ def cliente_upload():
     print('¿Está autenticado?:', current_user.is_authenticated)
     print('Sesión actual:', dict(session))
 
-    # Inicializar Azure Blob Storage
     azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
     azure_account_key = os.environ.get('AZURE_CLIENTE_ACCOUNT_KEY')
     azure_container_name = os.environ.get('AZURE_CLIENTE_CONTAINER', 'clienteai')
@@ -374,23 +374,10 @@ def cliente_upload():
     blob_service_client = BlobServiceClient.from_connection_string(connect_str)
 
     try:
-        # Obtener RFC de la sesión
         rfc = session.get('rfc')
         print('RFC en sesión:', rfc)
         if not rfc:
             return jsonify({"error": "No se encontró el RFC en la sesión"}), 400
-
-        # Intentar leer datos.json, pero no fallar si no existe
-        print('Intentando leer datos del blob:', f"{rfc}/datos.json")
-        try:
-            blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=f"{rfc}/datos.json")
-            datos_json = blob_client.download_blob().readall()
-            import json
-            datos = json.loads(datos_json)
-            print('Datos procesados:', datos)
-        except Exception as e:
-            print('Warning: datos.json no existe o no se pudo leer:', str(e))
-            datos = None
 
         # Procesar el video (aceptar 'video' o 'main_video')
         video = request.files.get('video') or request.files.get('main_video')
@@ -406,25 +393,30 @@ def cliente_upload():
         video_blob_client.upload_blob(video, overwrite=True)
         print(f"Video guardado en: {video_blob_name}")
 
-        # Si es presentacion.webm, transcribir y guardar score
-        if filename == 'presentacion.webm':
+        # Crear status.json con estado 'processing'
+        import json
+        from io import BytesIO
+        status_blob = f"{rfc}/status.json"
+        status_data = BytesIO(json.dumps({"status": "processing"}, ensure_ascii=False).encode('utf-8'))
+        status_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=status_blob)
+        status_blob_client.upload_blob(status_data, overwrite=True)
+
+        # Procesamiento asíncrono en thread
+        def procesar_video_async(rfc, filename):
             import tempfile
             import subprocess
-            from io import BytesIO
             from app.azure_transcriber import AzureTranscriber
-            # Guardar temporalmente el video
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as tmp:
-                video.stream.seek(0)
-                tmp.write(video.read())
-                tmp_path = tmp.name
-            # Extraer audio a wav
-            audio_wav = tmp_path + '.wav'
             try:
+                # Descargar el video de Azure a un archivo temporal
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as tmp:
+                    video_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=f"{rfc}/{filename}")
+                    tmp.write(video_blob_client.download_blob().readall())
+                    tmp_path = tmp.name
+                audio_wav = tmp_path + '.wav'
                 subprocess.run([
                     'ffmpeg', '-y', '-i', tmp_path, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
                 ], check=True)
                 print('Audio extraído a:', audio_wav)
-                # Transcribir usando AzureTranscriber (transcripción completa)
                 transcriber = AzureTranscriber(
                     speech_key=os.environ.get('AZURE_SPEECH_KEY'),
                     service_region=os.environ.get('AZURE_SPEECH_REGION', 'eastus')
@@ -438,7 +430,6 @@ def cliente_upload():
                 transcript_blob = f"{rfc}/presentacion.txt"
                 blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=transcript_blob)
                 blob_client.upload_blob(transcript_bytes, overwrite=True)
-                print('Transcripción subida como .txt:', transcript_blob)
                 # Guardar score, scores, feedback y transcripción como .json
                 presentacion_json = BytesIO(json.dumps({
                     "score": scores['overall'],
@@ -450,10 +441,21 @@ def cliente_upload():
                 blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=presentacion_json_blob)
                 blob_client.upload_blob(presentacion_json, overwrite=True)
                 print('Transcripción y score subidos como .json:', presentacion_json_blob)
+                # Actualizar status.json a 'done'
+                status_done = BytesIO(json.dumps({"status": "done"}, ensure_ascii=False).encode('utf-8'))
+                status_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=status_blob)
+                status_blob_client.upload_blob(status_done, overwrite=True)
             except Exception as e:
-                print(f"Error transcribiendo presentacion.webm: {e}")
+                print(f"Error en procesamiento asíncrono: {e}")
+                # Actualizar status.json a 'error'
+                status_error = BytesIO(json.dumps({"status": "error", "error": str(e)}, ensure_ascii=False).encode('utf-8'))
+                status_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=status_blob)
+                status_blob_client.upload_blob(status_error, overwrite=True)
 
-        return jsonify({"success": True, "message": "Video subido correctamente"})
+        thread = threading.Thread(target=procesar_video_async, args=(rfc, filename))
+        thread.start()
+
+        return jsonify({"success": True, "message": "Video subido correctamente. El análisis estará listo en unos minutos."})
 
     except Exception as e:
         print('Error en cliente_upload:', str(e))
@@ -643,6 +645,24 @@ def api_cliente_me():
         'name': current_user.name,
         'email': current_user.email
     })
+
+@app.route('/api/cliente/status/<rfc>', methods=['GET'])
+def api_cliente_status(rfc):
+    from azure.storage.blob import BlobServiceClient
+    azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
+    azure_account_key = os.environ.get('AZURE_CLIENTE_ACCOUNT_KEY')
+    azure_container_name = os.environ.get('AZURE_CLIENTE_CONTAINER', 'clienteai')
+    connect_str = f"DefaultEndpointsProtocol=https;AccountName={azure_account_name};AccountKey={azure_account_key};EndpointSuffix=core.windows.net"
+    blob_service_client = BlobServiceClient.from_connection_string(connect_str)
+    status_blob = f"{rfc}/status.json"
+    try:
+        blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=status_blob)
+        status_json = blob_client.download_blob().readall()
+        import json
+        status_data = json.loads(status_json.decode("utf-8"))
+        return jsonify(status_data)
+    except Exception as e:
+        return jsonify({"status": "not_found", "error": str(e)})
 
 # Configurar API_KEY en Render
 os.environ['API_KEY'] = 'la_clave_secreta_de_kiko'

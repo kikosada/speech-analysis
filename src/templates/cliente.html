@@ -297,6 +297,38 @@
             if (minWaitDone) showFinalMessage();
         }
     }
+    async function fetchStatusAndScore(rfc) {
+        // Polling para status.json
+        let status = null;
+        let intentos = 0;
+        while (intentos < 60) { // Máximo 5 minutos (60*5s)
+            try {
+                const res = await fetch(`/api/cliente/status/${rfc}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    status = data.status;
+                    if (status === 'done') {
+                        // Cuando esté listo, obtener el score
+                        await fetchScoreAndShow();
+                        return;
+                    } else if (status === 'error') {
+                        document.getElementById('finalMsg').innerHTML = '<span style="color:red;">Ocurrió un error al analizar tu video. Intenta de nuevo más tarde.</span>';
+                        document.getElementById('finalMsg').style.display = 'block';
+                        document.getElementById('processingMsg').style.display = 'none';
+                        return;
+                    }
+                }
+            } catch (e) {}
+            // Mostrar mensaje de espera
+            document.getElementById('processingMsg').style.display = 'block';
+            document.getElementById('finalMsg').style.display = 'none';
+            await new Promise(res => setTimeout(res, 5000));
+            intentos++;
+        }
+        document.getElementById('finalMsg').innerHTML = '<span style="color:red;">El análisis está tardando más de lo esperado. Intenta de nuevo más tarde.</span>';
+        document.getElementById('finalMsg').style.display = 'block';
+        document.getElementById('processingMsg').style.display = 'none';
+    }
     document.getElementById('finishBtn').onclick = async ()=>{
         if(document.getElementById('objetivoCrediclub').value.trim()){
             showStep(6); // Mostrar paso 6 inmediatamente
@@ -309,7 +341,6 @@
                 planesCredito: document.getElementById('planesCredito').value.trim(),
                 objetivoCrediclub: document.getElementById('objetivoCrediclub').value.trim()
             };
-            // Enviar al backend
             try {
                 const response = await fetch('/cliente_datos', {
                     method: 'POST',
@@ -317,7 +348,8 @@
                     body: JSON.stringify(datos)
                 });
                 if (response.ok) {
-                    fetchScoreAndShow();
+                    // Polling para status.json
+                    await fetchStatusAndScore(datos.rfc);
                 } else {
                     alert('Error al guardar los datos.');
                 }
