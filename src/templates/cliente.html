@@ -343,7 +343,10 @@
     async function startMainStream1() {
         if (mainStream1) mainStream1.getTracks().forEach(t => t.stop());
         try {
-            mainStream1 = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true });
+            mainStream1 = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 360 } },
+                audio: true
+            });
             mainVideo1.srcObject = mainStream1;
             mainVideo1.classList.add('mirrored');
             recordBtn1.disabled = false;
@@ -355,7 +358,10 @@
     async function startMainStream2() {
         if (mainStream2) mainStream2.getTracks().forEach(t => t.stop());
         try {
-            mainStream2 = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: true });
+            mainStream2 = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 360 } },
+                audio: true
+            });
             mainVideo2.srcObject = mainStream2;
             mainVideo2.classList.remove('mirrored');
             recordBtn2.disabled = false;
