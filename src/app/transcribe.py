@@ -61,25 +61,25 @@ def analyze_company_knowledge(text: str) -> Tuple[Dict[str, int], List[str]]:
 
     for rule in rules:
         count = sum(1 for pattern in rule['patterns'] if pattern in text)
-        # Escalado simple: 0=0, 1=5, 2=8, 3 o más=10
+        # Escalado decimal: 0=0.0, 1=5.0, 2=8.0, 3 o más=10.0
         if count == 0:
-            score = 0
+            score = 0.0
             fb = f"{rule['name']}: No se detecta evidencia. {rule['feedback']}"
         elif count == 1:
-            score = 5
+            score = 5.0
             fb = f"{rule['name']}: Menciona al menos un aspecto, pero puede profundizar más. {rule['feedback']}"
         elif count == 2:
-            score = 8
+            score = 8.0
             fb = f"{rule['name']}: Bien cubierto, pero puede ser aún más detallado. {rule['feedback']}"
         else:
-            score = 10
+            score = 10.0
             fb = f"{rule['name']}: Excelente, cubre este aspecto de forma completa. {rule['feedback']}"
         scores[rule['key']] = score
         feedback.append(fb)
         total_score += score
 
     # Calificación global
-    scores['overall'] = round(total_score / len(rules))
+    scores['overall'] = round(total_score / len(rules), 1)
 
     return scores, feedback
 
