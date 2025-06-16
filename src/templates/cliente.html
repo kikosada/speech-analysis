@@ -435,19 +435,26 @@
                 const mainBlob = new Blob(mainChunks1, { type: 'video/webm' });
                 formData.append('main_video', mainBlob, 'presentacion.webm');
             }
-            try {
-                const response = await fetch('/cliente_upload', {
-                    method: 'POST',
-                    body: formData
-                });
-                if (response.ok) {
-                    showStep(2);
-                } else {
+            // Mostrar loading breve y avanzar al paso 3
+            const step2 = document.getElementById('step2');
+            const loadingDiv = document.createElement('div');
+            loadingDiv.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;margin-top:2em;"><span class="spinner"></span><span style="font-size:1.2em;color:#1976d2;font-weight:600;margin-top:1em;">Subiendo video...</span></div>';
+            step2.appendChild(loadingDiv);
+            setTimeout(() => {
+                loadingDiv.remove();
+                showStep(2); // Avanza al paso 3
+            }, 1500);
+            // Subir el video en segundo plano
+            fetch('/cliente_upload', {
+                method: 'POST',
+                body: formData
+            }).then(response => {
+                if (!response.ok) {
                     alert('Error al subir el video.');
                 }
-            } catch (e) {
+            }).catch(() => {
                 alert('Error al subir el video.');
-            }
+            });
         }
     });
     // --- Grabación Paso 3 ---
