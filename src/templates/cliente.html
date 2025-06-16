@@ -433,7 +433,9 @@
             const formData = new FormData();
             if (mainChunks1.length > 0) {
                 const mainBlob = new Blob(mainChunks1, { type: 'video/webm' });
-                formData.append('main_video', mainBlob, 'presentacion.webm');
+                const mainFile = new File([mainBlob], 'presentacion.webm', { type: 'video/webm' });
+                formData.append('video', mainFile);
+                formData.append('rfc', document.getElementById('rfc').value.trim().toUpperCase());
             }
             // Mostrar loading breve y avanzar al paso 3
             const step2 = document.getElementById('step2');
@@ -448,9 +450,34 @@
             fetch('/cliente_upload', {
                 method: 'POST',
                 body: formData
-            }).then(response => {
+            }).then(async response => {
                 if (!response.ok) {
                     alert('Error al subir el video.');
+                } else {
+                    const data = await response.json();
+                    if (data.success) {
+                        console.log('Video subido correctamente');
+                        // Mostrar loading por 1.5 segundos
+                        const loadingDiv = document.createElement('div');
+                        loadingDiv.textContent = 'Subiendo video...';
+                        loadingDiv.style.position = 'fixed';
+                        loadingDiv.style.top = '50%';
+                        loadingDiv.style.left = '50%';
+                        loadingDiv.style.transform = 'translate(-50%, -50%)';
+                        loadingDiv.style.padding = '20px';
+                        loadingDiv.style.background = 'rgba(0, 0, 0, 0.7)';
+                        loadingDiv.style.color = 'white';
+                        loadingDiv.style.borderRadius = '5px';
+                        document.body.appendChild(loadingDiv);
+                        setTimeout(() => {
+                            document.body.removeChild(loadingDiv);
+                            // Avanzar al paso 3
+                            document.getElementById('step2').style.display = 'none';
+                            document.getElementById('step3').style.display = 'block';
+                        }, 1500);
+                    } else {
+                        console.error('Error al subir el video:', data.error);
+                    }
                 }
             }).catch(() => {
                 alert('Error al subir el video.');
@@ -489,7 +516,9 @@
             const formData = new FormData();
             if (mainChunks2.length > 0) {
                 const mainBlob = new Blob(mainChunks2, { type: 'video/webm' });
-                formData.append('main_video', mainBlob, 'workspace.webm');
+                const mainFile = new File([mainBlob], 'workspace.webm', { type: 'video/webm' });
+                formData.append('video', mainFile);
+                formData.append('rfc', document.getElementById('rfc').value.trim().toUpperCase());
             }
             try {
                 const response = await fetch('/cliente_upload', {
@@ -497,12 +526,30 @@
                     body: formData
                 });
                 if (response.ok) {
-                    showStep(3);
+                    console.log('Video subido correctamente');
+                    // Mostrar loading por 1.5 segundos
+                    const loadingDiv = document.createElement('div');
+                    loadingDiv.textContent = 'Subiendo video...';
+                    loadingDiv.style.position = 'fixed';
+                    loadingDiv.style.top = '50%';
+                    loadingDiv.style.left = '50%';
+                    loadingDiv.style.transform = 'translate(-50%, -50%)';
+                    loadingDiv.style.padding = '20px';
+                    loadingDiv.style.background = 'rgba(0, 0, 0, 0.7)';
+                    loadingDiv.style.color = 'white';
+                    loadingDiv.style.borderRadius = '5px';
+                    document.body.appendChild(loadingDiv);
+                    setTimeout(() => {
+                        document.body.removeChild(loadingDiv);
+                        // Avanzar al paso 4
+                        document.getElementById('step3').style.display = 'none';
+                        document.getElementById('step4').style.display = 'block';
+                    }, 1500);
                 } else {
-                    alert('Error al subir el video.');
+                    console.error('Error al subir el video:', response.statusText);
                 }
-            } catch (e) {
-                alert('Error al subir el video.');
+            } catch (error) {
+                console.error('Error al subir el video:', error);
             }
         }
     });
