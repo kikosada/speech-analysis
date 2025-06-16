@@ -413,10 +413,18 @@ def cliente_upload():
                     tmp.write(video_blob_client.download_blob().readall())
                     tmp_path = tmp.name
                 audio_wav = tmp_path + '.wav'
-                subprocess.run([
+                # Ejecutar ffmpeg y capturar salida
+                ffmpeg_proc = subprocess.run([
                     'ffmpeg', '-y', '-i', tmp_path, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
-                ], check=True)
+                ], capture_output=True, text=True)
+                print('FFMPEG STDOUT:', ffmpeg_proc.stdout)
+                print('FFMPEG STDERR:', ffmpeg_proc.stderr)
                 print('Audio extraído a:', audio_wav)
+                # Subir el .wav a Azure para depuración
+                with open(audio_wav, 'rb') as wavfile:
+                    wav_blob = f"{rfc}/presentacion.wav"
+                    wav_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=wav_blob)
+                    wav_blob_client.upload_blob(wavfile, overwrite=True)
                 transcriber = AzureTranscriber(
                     speech_key=os.environ.get('AZURE_SPEECH_KEY'),
                     service_region=os.environ.get('AZURE_SPEECH_REGION', 'eastus')
