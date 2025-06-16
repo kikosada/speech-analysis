@@ -218,9 +218,9 @@
         </div>
         <!-- Paso 4: Giro de la empresa y número de empleados -->
         <div id="step4" class="step-block" style="display:none;">
-            <span class="label">Paso 4: Cuéntanos más sobre tu empresa</span>
-            <textarea id="giroEmpresa" placeholder="¿A qué se dedica tu empresa?" required style="width:100%;padding:0.7em;margin:1em 0 0.5em 0;font-size:1.1em;border-radius:8px;border:1.5px solid #d1d5db;min-height:70px;"></textarea>
-            <input type="number" id="numEmpleados" min="1" placeholder="Número de empleados" required style="width:100%;padding:0.7em;margin:0.5em 0 0.5em 0;font-size:1.1em;border-radius:8px;border:1.5px solid #d1d5db;">
+            <span class="label">Paso 4: Cuentanos mas sobre tus metas</span>
+            <textarea id="numCreditos" placeholder="¿Cuanto credito buscas?" required style="width:100%;padding:0.7em;margin:1em 0 0.5em 0;font-size:1.1em;border-radius:8px;border:1.5px solid #d1d5db;min-height:70px;"></textarea>
+            <input type="number" id="planesCredito" min="1" placeholder="¿Cuales son tus planes a corto plazo?" required style="width:100%;padding:0.7em;margin:0.5em 0 0.5em 0;font-size:1.1em;border-radius:8px;border:1.5px solid #d1d5db;">
             <button id="nextBtn4" class="record-btn">Siguiente</button>
         </div>
         <!-- Paso 5: Objetivo con Crediclub -->
@@ -262,8 +262,8 @@
     showStep(0);
     // Navegación entre pasos
     document.getElementById('nextBtn4').onclick = ()=>{
-        if(document.getElementById('giroEmpresa').value.trim() && document.getElementById('numEmpleados').value>0) showStep(4);
-        else alert('Por favor describe el giro de tu empresa y el número de empleados.');
+        if(document.getElementById('numCreditos').value.trim() && document.getElementById('planesCredito').value.trim()) showStep(4);
+        else alert('Por favor responde ambas preguntas sobre tus metas.');
     };
     let scoreData = null;
     let timerDone = false;
@@ -305,8 +305,8 @@
                 nombreCompleto: document.getElementById('nombreCompleto').value.trim(),
                 nombreEmpresa: document.getElementById('nombreEmpresa').value.trim(),
                 rfc: document.getElementById('rfc').value.trim().toUpperCase(),
-                giroEmpresa: document.getElementById('giroEmpresa').value.trim(),
-                numEmpleados: document.getElementById('numEmpleados').value,
+                numCreditos: document.getElementById('numCreditos').value.trim(),
+                planesCredito: document.getElementById('planesCredito').value.trim(),
                 objetivoCrediclub: document.getElementById('objetivoCrediclub').value.trim()
             };
             // Enviar al backend

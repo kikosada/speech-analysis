@@ -489,6 +489,7 @@ def cliente_datos():
         blob_name = folder_prefix + 'datos.json'
         import json
         from io import BytesIO
+        # No es necesario cambiar nada más, los nuevos campos ya llegan en datos
         datos_bytes = BytesIO(json.dumps(datos, ensure_ascii=False, indent=2).encode('utf-8'))
         blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=blob_name)
         blob_client.upload_blob(datos_bytes, overwrite=True)
@@ -705,11 +706,11 @@ def cliente_score():
         score = datos.get('score', 0)
         # Mensaje según el score
         if score <= 5:
-            mensaje = "Lo sentimos, vuelve a intentar en un mes."
+            mensaje = "Lamentamos informarle que su solicitud de crédito no fue aprobada. Gracias por su confianza, estamos aquí para ayudarle. ¡Intente de nuevo en un mes!"
         elif 6 <= score <= 8:
-            mensaje = "Irá un asesor a ver la empresa..."
+            mensaje = "¡Nos gusta tu empresa! Un asesor se pondrá en contacto contigo."
         else:
-            mensaje = "¡Nos gusta tu empresa!"
+            mensaje = "¡Nos interesa tu empresa y vemos potencial! Pronto alguien de nuestro equipo se pondrá en contacto."
         return jsonify({'score': score, 'mensaje': mensaje})
     except Exception as e:
         print('Error en /cliente_score:', e)
