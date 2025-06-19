@@ -236,12 +236,14 @@
         <div id="step6" class="step-block" style="display:none;">
             <div id="processingMsg" style="display:block;text-align:center;">
                 <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;margin-top:2em;">
-                    <div><span class="spinner"></span><span style="font-size:1.3em;color:#1976d2;font-weight:600;">Realizando análisis, espera unos segundos...</span></div>
-                    <div style="font-size:1.1em;color:#1a355e;margin-top:0.7em;">Procesando tu resultado... Por favor espera <span id="countdown">2</span> segundos.</div>
+                    <div class="spinner"></div>
+                    <div style="font-size:1.3em;color:#1976d2;font-weight:600;margin-top:1em;">Procesando tu información...</div>
+                    <div style="font-size:1.1em;color:#1a355e;margin-top:0.7em;">Por favor espera mientras analizamos tus respuestas.</div>
                 </div>
             </div>
-            <div id="finalMsg" style="text-align:center;font-size:1.5em;color:#1976d2;margin-top:2em;display:none;"></div>
-            <div id="scoreDebug" style="text-align:center;font-size:1.1em;color:red;margin-top:1em;display:none;"></div>
+            <div id="finalMsg" style="display:none;text-align:center;padding:2em;">
+                <!-- El contenido se llenará dinámicamente -->
+            </div>
         </div>
     </div>
     <script>
@@ -359,12 +361,75 @@
                 });
 
                 if (response.ok) {
+                    // Mostrar paso final
                     showStep(5);
-                    // Mostrar mensaje de procesamiento
                     document.getElementById('processingMsg').style.display = 'block';
                     document.getElementById('finalMsg').style.display = 'none';
-                    // Iniciar polling
-                    await fetchStatusAndScore(datos.rfc);
+
+                    // Iniciar verificación de estado
+                    let attempts = 0;
+                    const maxAttempts = 30;
+                    const checkStatus = async () => {
+                        try {
+                            const statusResponse = await fetch(`/cliente_status?rfc=${datos.rfc}`);
+                            if (statusResponse.ok) {
+                                const statusData = await statusResponse.json();
+                                if (statusData.status === 'done') {
+                                    // Obtener el score final
+                                    const scoreResponse = await fetch('/cliente_score');
+                                    if (scoreResponse.ok) {
+                                        const scoreData = await scoreResponse.json();
+                                        showStep(5);
+                                        document.getElementById('processingMsg').style.display = 'none';
+                                        document.getElementById('finalMsg').style.display = 'block';
+                                        document.getElementById('finalMsg').innerHTML = `
+                                            <div style="font-size:1.5em;color:#1976d2;font-weight:800;margin-bottom:0.5em;">
+                                                ¡Gracias por llenar la encuesta!
+                                            </div>
+                                            <div style="font-size:1.1em;color:#1a355e;margin-bottom:0.7em;">
+                                                ${scoreData.mensaje || '¡Tus respuestas han sido enviadas correctamente!'}
+                                            </div>`;
+                                    } else {
+                                        throw new Error('Error al obtener el score');
+                                    }
+                                } else if (statusData.status === 'error') {
+                                    throw new Error(statusData.error || 'Error procesando el video');
+                                } else if (attempts < maxAttempts) {
+                                    attempts++;
+                                    setTimeout(checkStatus, 1000);
+                                } else {
+                                    // Timeout - mostrar mensaje genérico
+                                    showStep(5);
+                                    document.getElementById('processingMsg').style.display = 'none';
+                                    document.getElementById('finalMsg').style.display = 'block';
+                                    document.getElementById('finalMsg').innerHTML = `
+                                        <div style="font-size:1.5em;color:#1976d2;font-weight:800;margin-bottom:0.5em;">
+                                            ¡Gracias por llenar la encuesta!
+                                        </div>
+                                        <div style="font-size:1.1em;color:#1a355e;margin-bottom:0.7em;">
+                                            ¡Tus respuestas han sido enviadas correctamente!
+                                        </div>`;
+                                }
+                            } else {
+                                throw new Error('Error al verificar el estado');
+                            }
+                        } catch (error) {
+                            console.error('Error:', error);
+                            showStep(5);
+                            document.getElementById('processingMsg').style.display = 'none';
+                            document.getElementById('finalMsg').style.display = 'block';
+                            document.getElementById('finalMsg').innerHTML = `
+                                <div style="font-size:1.5em;color:#1976d2;font-weight:800;margin-bottom:0.5em;">
+                                    ¡Gracias por llenar la encuesta!
+                                </div>
+                                <div style="font-size:1.1em;color:#1a355e;margin-bottom:0.7em;">
+                                    ¡Tus respuestas han sido enviadas correctamente!
+                                </div>`;
+                        }
+                    };
+
+                    // Iniciar verificación
+                    checkStatus();
                 } else {
                     const data = await response.json();
                     alert(data.error || 'Error al guardar los datos.');
@@ -717,4 +782,5 @@
     });
     </script>
 </body>
+</html> 
 </html> 
