@@ -177,6 +177,9 @@
         </div>
         <h1>AsesorIA</h1>
         <div id="progressBar" style="display:flex;justify-content:center;gap:0.5em;margin-bottom:1.2em;"></div>
+        <div id="uploadProgress" style="margin: 20px 0;">
+            <!-- Aquí se mostrará la barra de progreso -->
+        </div>
         <!-- Paso 1: Nombre completo y nombre de la empresa -->
         <div id="step1" class="step-block">
             <span class="label">Paso 1: Cuéntanos sobre ti y tu empresa</span>
@@ -607,6 +610,97 @@
             alert('Error al guardar los datos.');
         }
     };
+    // Función para subir video en chunks
+    async function uploadVideoInChunks(file, rfc) {
+        const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB por chunk
+        const fileId = Date.now().toString();
+        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+        
+        // Crear barra de progreso
+        const progressBar = document.createElement('div');
+        progressBar.style.width = '100%';
+        progressBar.style.height = '20px';
+        progressBar.style.backgroundColor = '#f0f0f0';
+        progressBar.style.borderRadius = '10px';
+        progressBar.style.overflow = 'hidden';
+        progressBar.style.margin = '20px 0';
+        
+        const progressFill = document.createElement('div');
+        progressFill.style.width = '0%';
+        progressFill.style.height = '100%';
+        progressFill.style.backgroundColor = '#4CAF50';
+        progressFill.style.transition = 'width 0.3s ease';
+        
+        const progressText = document.createElement('div');
+        progressText.style.textAlign = 'center';
+        progressText.style.marginTop = '5px';
+        
+        progressBar.appendChild(progressFill);
+        document.querySelector('#uploadProgress').appendChild(progressBar);
+        document.querySelector('#uploadProgress').appendChild(progressText);
+        
+        for (let i = 0; i < totalChunks; i++) {
+            const start = i * CHUNK_SIZE;
+            const end = Math.min(start + CHUNK_SIZE, file.size);
+            const chunk = file.slice(start, end);
+            
+            const formData = new FormData();
+            formData.append('chunk', chunk);
+            formData.append('chunk_number', i);
+            formData.append('total_chunks', totalChunks);
+            formData.append('file_id', fileId);
+            formData.append('rfc', rfc);
+            
+            try {
+                const response = await fetch('/cliente_upload_chunk', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Error al subir chunk');
+                }
+                
+                // Actualizar progreso
+                const progress = ((i + 1) / totalChunks) * 100;
+                progressFill.style.width = `${progress}%`;
+                progressText.textContent = `Subiendo: ${Math.round(progress)}%`;
+                
+                // Si es el último chunk
+                if (i === totalChunks - 1) {
+                    progressText.textContent = 'Procesando video...';
+                    // Esperar 2 segundos antes de continuar
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    return true;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                progressText.textContent = 'Error al subir el video';
+                progressText.style.color = 'red';
+                throw error;
+            }
+        }
+    }
+    // Modificar el evento de subida existente
+    document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const file = document.getElementById('videoInput').files[0];
+        const rfc = document.getElementById('rfcInput').value;
+        
+        if (!file || !rfc) {
+            alert('Por favor selecciona un video y proporciona tu RFC');
+            return;
+        }
+        
+        try {
+            await uploadVideoInChunks(file, rfc);
+            // Avanzar al siguiente paso
+            document.getElementById('currentStep').style.display = 'none';
+            document.getElementById('nextStep').style.display = 'block';
+        } catch (error) {
+            alert('Error al subir el video. Por favor intenta de nuevo.');
+        }
+    });
     </script>
 </body>
 </html> 

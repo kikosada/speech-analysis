@@ -29,6 +29,8 @@ from sqlalchemy import create_engine
 from flask_sqlalchemy import SQLAlchemy
 import threading
 import requests
+import shutil
+from io import BytesIO
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -453,62 +455,102 @@ def cliente_upload():
 
             # Procesamiento asíncrono en thread
             def procesar_video_async(rfc, filename):
-                import tempfile
-                import subprocess
-                from .azure_transcriber import AzureTranscriber
                 try:
-                    # Descargar el video de Azure a un archivo temporal
-                    with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as tmp:
-                        video_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=f"{rfc}/{filename}")
-                        tmp.write(video_blob_client.download_blob().readall())
-                        tmp_path = tmp.name
-                    audio_wav = tmp_path + '.wav'
-                    # Ejecutar ffmpeg y capturar salida
-                    ffmpeg_proc = subprocess.run([
-                        'ffmpeg', '-y', '-i', tmp_path, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
-                    ], capture_output=True, text=True)
-                    print('FFMPEG STDOUT:', ffmpeg_proc.stdout)
-                    print('FFMPEG STDERR:', ffmpeg_proc.stderr)
-                    print('Audio extraído a:', audio_wav)
-                    # Subir el .wav a Azure para depuración
-                    with open(audio_wav, 'rb') as wavfile:
-                        wav_blob = f"{rfc}/presentacion.wav"
-                        wav_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=wav_blob)
-                        wav_blob_client.upload_blob(wavfile, overwrite=True)
+                    azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
+                    azure_account_key = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
+                    azure_container_name = os.environ.get('AZURE_CONTAINER_NAME', 'clientai')
+                    connect_str = f"DefaultEndpointsProtocol=https;AccountName={azure_account_name};AccountKey={azure_account_key};EndpointSuffix=core.windows.net"
+                    blob_service_client = BlobServiceClient.from_connection_string(connect_str)
+
+                    # Crear directorio temporal
+                    temp_dir = tempfile.mkdtemp()
+                    video_path = os.path.join(temp_dir, filename)
+                    
+                    # Descargar video en chunks
+                    video_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=f"{rfc}/{filename}")
+                    
+                    # Descargar en chunks de 4MB
+                    chunk_size = 4 * 1024 * 1024
+                    with open(video_path, "wb") as video_file:
+                        stream = video_blob_client.download_blob()
+                        for chunk in stream.chunks():
+                            video_file.write(chunk)
+
+                    # Procesar audio en chunks
+                    audio_path = os.path.join(temp_dir, 'audio.wav')
+                    
+                    # Convertir video a audio usando ffmpeg con configuración optimizada
+                    subprocess.run([
+                        'ffmpeg', '-y',
+                        '-i', video_path,
+                        '-vn',  # No video
+                        '-acodec', 'pcm_s16le',
+                        '-ar', '16000',  # Sample rate
+                        '-ac', '1',  # Mono
+                        '-af', 'volume=1.5',  # Aumentar volumen
+                        '-segment_time', '300',  # Dividir en segmentos de 5 minutos
+                        '-f', 'segment',
+                        os.path.join(temp_dir, 'audio_chunk_%03d.wav')
+                    ], check=True)
+
+                    # Procesar cada chunk de audio
                     transcriber = AzureTranscriber(
                         speech_key=os.environ.get('AZURE_SPEECH_KEY'),
                         service_region=os.environ.get('AZURE_SPEECH_REGION', 'eastus')
                     )
-                    result = transcriber.transcribe(audio_wav)
-                    transcript = result['text']
-                    scores = result['scores']
-                    feedback = result['feedback']
-                    # Guardar la transcripción como .txt
-                    transcript_bytes = BytesIO(transcript.encode('utf-8'))
-                    transcript_blob = f"{rfc}/presentacion.txt"
-                    blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=transcript_blob)
-                    blob_client.upload_blob(transcript_bytes, overwrite=True)
-                    # Guardar score, scores, feedback y transcripción como .json
-                    presentacion_json = BytesIO(json.dumps({
-                        "score": scores['overall'],
-                        "scores": scores,
-                        "feedback": feedback,
-                        "transcripcion": transcript
-                    }, ensure_ascii=False, indent=2).encode('utf-8'))
-                    presentacion_json_blob = f"{rfc}/presentacion.json"
-                    blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=presentacion_json_blob)
-                    blob_client.upload_blob(presentacion_json, overwrite=True)
-                    print('Transcripción y score subidos como .json:', presentacion_json_blob)
-                    # Actualizar status.json a 'done'
-                    status_done = BytesIO(json.dumps({"status": "done"}, ensure_ascii=False).encode('utf-8'))
-                    status_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=status_blob)
-                    status_blob_client.upload_blob(status_done, overwrite=True)
+
+                    full_transcript = []
+                    audio_chunks = sorted([f for f in os.listdir(temp_dir) if f.startswith('audio_chunk_')])
+                    
+                    for chunk_file in audio_chunks:
+                        chunk_path = os.path.join(temp_dir, chunk_file)
+                        result = transcriber.transcribe(chunk_path)
+                        if isinstance(result, dict) and 'text' in result:
+                            full_transcript.append(result['text'])
+                        else:
+                            full_transcript.append(str(result))
+
+                    # Unir transcripciones
+                    transcript = ' '.join(full_transcript)
+
+                    # Calificar y generar feedback
+                    score = 1
+                    texto = transcript.lower()
+                    if any(pal in texto for pal in ['empresa', 'negocio', 'compañía']): score += 2
+                    if any(pal in texto for pal in ['servicio', 'producto', 'ofrecemos', 'vendemos']): score += 2
+                    if any(pal in texto for pal in ['mision', 'visión', 'valores']): score += 2
+                    if len(transcript.split()) > 30: score += 2
+                    if score > 10: score = 10
+
+                    # Guardar resultados
+                    results = {
+                        "score": score,
+                        "transcripcion": transcript,
+                        "procesamiento_completo": True,
+                        "timestamp": datetime.now().isoformat()
+                    }
+
+                    # Subir resultados a Azure
+                    results_json = BytesIO(json.dumps(results, ensure_ascii=False, indent=2).encode('utf-8'))
+                    results_blob = f"{rfc}/resultados_{filename}.json"
+                    blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=results_blob)
+                    blob_client.upload_blob(results_json, overwrite=True)
+
+                    # Limpiar archivos temporales
+                    shutil.rmtree(temp_dir)
+
                 except Exception as e:
-                    print(f"Error en procesamiento asíncrono: {e}")
-                    # Actualizar status.json a 'error'
-                    status_error = BytesIO(json.dumps({"status": "error", "error": str(e)}, ensure_ascii=False).encode('utf-8'))
-                    status_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=status_blob)
-                    status_blob_client.upload_blob(status_error, overwrite=True)
+                    logger.error(f"Error en procesar_video_async: {e}")
+                    # Guardar error en Azure
+                    error_data = {
+                        "error": str(e),
+                        "procesamiento_completo": False,
+                        "timestamp": datetime.now().isoformat()
+                    }
+                    error_json = BytesIO(json.dumps(error_data, ensure_ascii=False).encode('utf-8'))
+                    error_blob = f"{rfc}/error_{filename}.json"
+                    blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=error_blob)
+                    blob_client.upload_blob(error_json, overwrite=True)
 
             thread = threading.Thread(target=procesar_video_async, args=(rfc, filename))
             thread.start()
@@ -869,8 +911,6 @@ def get_video_insights(video_id):
         insights_data['tipo_inmueble'] = tipo_inmueble
         
         # Guardar el resultado en un archivo JSON en Azure Blob Storage
-        import json
-        from io import BytesIO
         workspace_json = BytesIO(json.dumps(insights_data, ensure_ascii=False, indent=2).encode('utf-8'))
         workspace_json_blob = f"{video_id}/workspace.json"
         blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=workspace_json_blob)
@@ -880,6 +920,75 @@ def get_video_insights(video_id):
     except Exception as e:
         print(f"Error obteniendo insights: {e}")
         return jsonify({"error": f"No se pudo obtener insights: {e}"}), 500
+
+@app.route('/cliente_upload_chunk', methods=['POST'])
+def cliente_upload_chunk():
+    try:
+        # Obtener información del chunk
+        chunk_number = int(request.form.get('chunk_number'))
+        total_chunks = int(request.form.get('total_chunks'))
+        file_id = request.form.get('file_id')
+        rfc = request.form.get('rfc')
+        
+        if not all([chunk_number, total_chunks, file_id, rfc]):
+            return jsonify({"error": "Faltan parámetros requeridos"}), 400
+
+        # Configurar Azure Blob Storage
+        azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
+        azure_account_key = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
+        azure_container_name = os.environ.get('AZURE_CONTAINER_NAME', 'clientai')
+        connect_str = f"DefaultEndpointsProtocol=https;AccountName={azure_account_name};AccountKey={azure_account_key};EndpointSuffix=core.windows.net"
+        blob_service_client = BlobServiceClient.from_connection_string(connect_str)
+
+        # Guardar el chunk en un archivo temporal
+        chunk = request.files.get('chunk')
+        if not chunk:
+            return jsonify({"error": "No se recibió el chunk"}), 400
+
+        temp_dir = f"temp_chunks/{file_id}"
+        os.makedirs(temp_dir, exist_ok=True)
+        chunk_path = f"{temp_dir}/chunk_{chunk_number}"
+        
+        chunk.save(chunk_path)
+
+        # Si es el último chunk, unir todos los chunks y procesar
+        if chunk_number == total_chunks - 1:
+            final_path = f"{temp_dir}/final_video.webm"
+            with open(final_path, 'wb') as final_file:
+                for i in range(total_chunks):
+                    chunk_file_path = f"{temp_dir}/chunk_{i}"
+                    with open(chunk_file_path, 'rb') as chunk_file:
+                        final_file.write(chunk_file.read())
+
+            # Subir el video completo a Azure
+            video_blob_name = f"{rfc}/video_final.webm"
+            video_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=video_blob_name)
+            
+            with open(final_path, 'rb') as final_video:
+                video_blob_client.upload_blob(final_video, overwrite=True)
+
+            # Iniciar procesamiento asíncrono
+            thread = threading.Thread(target=procesar_video_async, args=(rfc, "video_final.webm"))
+            thread.start()
+
+            # Limpiar archivos temporales
+            import shutil
+            shutil.rmtree(temp_dir)
+
+            return jsonify({
+                "success": True,
+                "message": "Video subido y procesamiento iniciado",
+                "video_id": file_id
+            })
+        
+        return jsonify({
+            "success": True,
+            "message": f"Chunk {chunk_number + 1} de {total_chunks} recibido"
+        })
+
+    except Exception as e:
+        logger.error(f"Error en cliente_upload_chunk: {e}")
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
