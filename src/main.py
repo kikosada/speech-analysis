@@ -391,7 +391,7 @@ def asesor():
 @app.route('/cliente')
 @login_required
 def cliente():
-    return render_template('cliente/cliente.html')
+    return render_template('cliente.html')
 
 @app.route('/empresa', methods=['GET', 'POST'])
 @login_required

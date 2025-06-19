@@ -766,6 +766,42 @@ def api_cliente_status(rfc):
     except Exception as e:
         return jsonify({"status": "not_found", "error": str(e)})
 
+@app.route('/cliente_status')
+@login_required
+def cliente_status():
+    try:
+        rfc = request.args.get('rfc')
+        if not rfc:
+            return jsonify({"error": "RFC no proporcionado"}), 400
+
+        azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
+        azure_account_key = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
+        azure_container_name = os.environ.get('AZURE_CONTAINER_NAME', 'clientai')
+        connect_str = f"DefaultEndpointsProtocol=https;AccountName={azure_account_name};AccountKey={azure_account_key};EndpointSuffix=core.windows.net"
+        blob_service_client = BlobServiceClient.from_connection_string(connect_str)
+
+        # Verificar si existe el archivo de resultados
+        results_blob = f"{rfc}/resultados_video_final.webm.json"
+        try:
+            blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=results_blob)
+            blob_client.get_blob_properties()
+            return jsonify({"status": "done"})
+        except Exception as e:
+            # Verificar si hay error
+            error_blob = f"{rfc}/error_video_final.webm.json"
+            try:
+                blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=error_blob)
+                blob_client.get_blob_properties()
+                error_data = json.loads(blob_client.download_blob().readall().decode('utf-8'))
+                return jsonify({"status": "error", "error": error_data.get('error', 'Error desconocido')})
+            except Exception:
+                # Si no hay ni resultados ni error, está en proceso
+                return jsonify({"status": "processing"})
+
+    except Exception as e:
+        logger.error(f"Error en cliente_status: {e}")
+        return jsonify({"error": str(e)}), 500
+
 # Configurar API_KEY en Render
 os.environ['API_KEY'] = 'la_clave_secreta_de_kiko'
 

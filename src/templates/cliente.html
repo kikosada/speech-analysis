@@ -277,64 +277,70 @@
         document.getElementById('processingMsg').style.display = 'none';
         document.getElementById('finalMsg').innerHTML = `<div style=\"font-size:1.5em;color:#1976d2;font-weight:800;margin-bottom:0.5em;\">¡Gracias por llenar la encuesta!</div><div style=\"font-size:1.1em;color:#1a355e;margin-bottom:0.7em;\">${scoreData ? scoreData.mensaje : '<span style=\\\"color:red;\\\">Ocurrió un error al obtener tu resultado.</span>'}</div>`;
     }
-    async function fetchScoreAndShow() {
-        document.getElementById('step6').style.display = 'block';
-        document.getElementById('processingMsg').style.display = 'block';
-        document.getElementById('finalMsg').style.display = 'none';
-        document.getElementById('scoreDebug').style.display = 'none';
-        let minWaitDone = false;
-        setTimeout(() => { minWaitDone = true; if (scoreData !== null) showFinalMessage(); }, 2000);
-        // Fetch
-        try {
-            const resScore = await fetch('/cliente_score');
-            if (resScore.ok) {
-                const dataScore = await resScore.json();
-                scoreData = dataScore;
-                if (minWaitDone) showFinalMessage();
-            } else {
-                scoreData = null;
-                if (minWaitDone) showFinalMessage();
-            }
-        } catch (e) {
-            scoreData = null;
-            if (minWaitDone) showFinalMessage();
-        }
-    }
     async function fetchStatusAndScore(rfc) {
-        // Polling para status.json
-        let status = null;
-        let intentos = 0;
-        while (intentos < 60) { // Máximo 5 minutos (60*5s)
+        let attempts = 0;
+        const maxAttempts = 30; // 30 segundos máximo de espera
+        const interval = 1000; // Revisar cada segundo
+
+        const checkStatus = async () => {
             try {
-                const res = await fetch(`/api/cliente/status/${rfc}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    status = data.status;
-                    if (status === 'done') {
-                        // Cuando esté listo, obtener el score
-                        await fetchScoreAndShow();
-                        return;
-                    } else if (status === 'error') {
-                        document.getElementById('finalMsg').innerHTML = '<span style="color:red;">Ocurrió un error al analizar tu video. Intenta de nuevo más tarde.</span>';
-                        document.getElementById('finalMsg').style.display = 'block';
-                        document.getElementById('processingMsg').style.display = 'none';
-                        return;
+                const response = await fetch(`/cliente_status?rfc=${rfc}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.status === 'done') {
+                        // Obtener el score
+                        const scoreResponse = await fetch('/cliente_score');
+                        if (scoreResponse.ok) {
+                            const scoreData = await scoreResponse.json();
+                            document.getElementById('processingMsg').style.display = 'none';
+                            document.getElementById('finalMsg').style.display = 'block';
+                            document.getElementById('finalMsg').innerHTML = `
+                                <div style="font-size:1.5em;color:#1976d2;font-weight:800;margin-bottom:0.5em;">
+                                    ¡Gracias por llenar la encuesta!
+                                </div>
+                                <div style="font-size:1.1em;color:#1a355e;margin-bottom:0.7em;">
+                                    ${scoreData.mensaje || '¡Tus respuestas han sido enviadas correctamente!'}
+                                </div>`;
+                            return;
+                        }
+                    } else if (data.status === 'error') {
+                        throw new Error(data.error || 'Error procesando el video');
                     }
                 }
-            } catch (e) {}
-            // Mostrar mensaje de espera
-            document.getElementById('processingMsg').style.display = 'block';
-            document.getElementById('finalMsg').style.display = 'none';
-            await new Promise(res => setTimeout(res, 5000));
-            intentos++;
-        }
-        document.getElementById('finalMsg').innerHTML = '<span style="color:red;">El análisis está tardando más de lo esperado. Intenta de nuevo más tarde.</span>';
-        document.getElementById('finalMsg').style.display = 'block';
-        document.getElementById('processingMsg').style.display = 'none';
+                attempts++;
+                if (attempts < maxAttempts) {
+                    setTimeout(checkStatus, interval);
+                } else {
+                    // Timeout - mostrar mensaje genérico
+                    document.getElementById('processingMsg').style.display = 'none';
+                    document.getElementById('finalMsg').style.display = 'block';
+                    document.getElementById('finalMsg').innerHTML = `
+                        <div style="font-size:1.5em;color:#1976d2;font-weight:800;margin-bottom:0.5em;">
+                            ¡Gracias por llenar la encuesta!
+                        </div>
+                        <div style="font-size:1.1em;color:#1a355e;margin-bottom:0.7em;">
+                            ¡Tus respuestas han sido enviadas correctamente!
+                        </div>`;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('processingMsg').style.display = 'none';
+                document.getElementById('finalMsg').style.display = 'block';
+                document.getElementById('finalMsg').innerHTML = `
+                    <div style="font-size:1.5em;color:#1976d2;font-weight:800;margin-bottom:0.5em;">
+                        ¡Gracias por llenar la encuesta!
+                    </div>
+                    <div style="font-size:1.1em;color:#1a355e;margin-bottom:0.7em;">
+                        ¡Tus respuestas han sido enviadas correctamente!
+                    </div>`;
+            }
+        };
+
+        // Iniciar el polling
+        checkStatus();
     }
-    document.getElementById('finishBtn').onclick = async ()=>{
-        if(document.getElementById('objetivoCrediclub').value.trim()){
-            showStep(6); // Mostrar paso 6 inmediatamente
+    document.getElementById('finishBtn').onclick = async () => {
+        if (document.getElementById('objetivoCrediclub').value.trim()) {
             // Recolectar todos los datos
             const datos = {
                 nombreCompleto: document.getElementById('nombreCompleto').value.trim(),
@@ -344,19 +350,27 @@
                 planesCredito: document.getElementById('planesCredito').value.trim(),
                 objetivoCrediclub: document.getElementById('objetivoCrediclub').value.trim()
             };
+
             try {
                 const response = await fetch('/cliente_datos', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(datos)
                 });
+
                 if (response.ok) {
-                    // Polling para status.json
+                    showStep(5);
+                    // Mostrar mensaje de procesamiento
+                    document.getElementById('processingMsg').style.display = 'block';
+                    document.getElementById('finalMsg').style.display = 'none';
+                    // Iniciar polling
                     await fetchStatusAndScore(datos.rfc);
                 } else {
-                    alert('Error al guardar los datos.');
+                    const data = await response.json();
+                    alert(data.error || 'Error al guardar los datos.');
                 }
             } catch (e) {
+                console.error('Error:', e);
                 alert('Error al guardar los datos.');
             }
         } else {
