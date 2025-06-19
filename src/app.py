@@ -1,9 +1,10 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, session
 import os
 import random
 from datetime import datetime
 
 app = Flask(__name__)
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'dev_key_123')
 
 @app.route('/')
 def index():
@@ -17,15 +18,15 @@ def cliente():
 def cliente_datos():
     try:
         datos = request.json
-        # Aquí normalmente guardaríamos los datos
+        if 'rfc' in datos:
+            session['rfc'] = datos['rfc']
         return jsonify({"success": True})
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-@app.route('/cliente_score')
+@app.route('/cliente_score', methods=['GET'])
 def cliente_score():
     try:
-        # Simulación de score
         score = random.uniform(5, 10)
         detalles = {
             "presentacion": round(random.uniform(5, 10), 1),
@@ -49,6 +50,7 @@ def cliente_score():
             "mensaje": mensaje
         })
     except Exception as e:
+        app.logger.error(f"Error en cliente_score: {e}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
