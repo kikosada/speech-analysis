@@ -3,7 +3,7 @@ services:
     name: verano
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: cd src && gunicorn --config gunicorn.conf.py main:app
+    startCommand: cd src && gunicorn main:app
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
@@ -14,6 +14,12 @@ services:
       - key: AZURE_STORAGE_ACCOUNT_KEY
         sync: false
       - key: AZURE_CONTAINER_NAME
+        sync: false
+      - key: VIDEO_INDEXER_SUBSCRIPTION_KEY
+        sync: false
+      - key: VIDEO_INDEXER_ACCOUNT_ID
+        sync: false
+      - key: VIDEO_INDEXER_LOCATION
         sync: false
       - key: GOOGLE_CLIENT_ID
         sync: false
