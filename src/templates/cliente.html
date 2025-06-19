@@ -379,6 +379,7 @@
                         throw new Error('Error obteniendo la evaluación');
                     }
                     const scoreData = await scoreResponse.json();
+                    console.log('Score data received:', scoreData); // Debug log
                     
                     document.getElementById('processingMsg').style.display = 'none';
                     document.getElementById('finalMsg').style.display = 'block';
@@ -395,7 +396,7 @@
                             </div>`;
                     }
 
-                    document.getElementById('finalMsg').innerHTML = `
+                    const finalMessage = `
                         <div style="font-size:1.5em;color:#1976d2;font-weight:800;margin-bottom:0.5em;">
                             ¡Gracias por llenar la encuesta!
                         </div>
@@ -403,6 +404,9 @@
                             ${scoreData.mensaje}
                         </div>
                         ${detallesHtml}`;
+                    
+                    console.log('Setting final message:', finalMessage); // Debug log
+                    document.getElementById('finalMsg').innerHTML = finalMessage;
                 } catch (error) {
                     console.error('Error obteniendo score:', error);
                     document.getElementById('processingMsg').style.display = 'none';
