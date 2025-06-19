@@ -343,7 +343,7 @@
                     <div style="font-size:1.1em;color:#e74c3c;margin-bottom:0.7em;">
                         Hubo un problema al procesar tu información. Por favor intenta nuevamente.
                     </div>`;
-            }
+                }
         };
 
         // Iniciar el polling
@@ -351,7 +351,6 @@
     }
     document.getElementById('finishBtn').onclick = async () => {
         if (document.getElementById('objetivoCrediclub').value.trim()) {
-            // Recolectar todos los datos
             const datos = {
                 nombreCompleto: document.getElementById('nombreCompleto').value.trim(),
                 nombreEmpresa: document.getElementById('nombreEmpresa').value.trim(),
@@ -366,7 +365,6 @@
                 document.getElementById('processingMsg').style.display = 'block';
                 document.getElementById('finalMsg').style.display = 'none';
 
-                // Guardar datos
                 const response = await fetch('/cliente_datos', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -381,18 +379,16 @@
                 await new Promise(resolve => setTimeout(resolve, 2000));
 
                 try {
-                    // Intentar obtener el score
                     const scoreResponse = await fetch('/cliente_score');
                     if (!scoreResponse.ok) {
                         throw new Error('Error obteniendo la evaluación');
                     }
                     const scoreData = await scoreResponse.json();
-                    console.log('Score data received:', scoreData); // Debug log
-                    
+                    console.log('Score data received:', scoreData);
+
                     document.getElementById('processingMsg').style.display = 'none';
                     document.getElementById('finalMsg').style.display = 'block';
                     
-                    // Construir mensaje detallado
                     let detallesHtml = '';
                     if (scoreData.detalles) {
                         detallesHtml = `
@@ -413,7 +409,7 @@
                         </div>
                         ${detallesHtml}`;
                     
-                    console.log('Setting final message:', finalMessage); // Debug log
+                    console.log('Setting final message:', finalMessage);
                     document.getElementById('finalMsg').innerHTML = finalMessage;
                 } catch (error) {
                     console.error('Error obteniendo score:', error);
@@ -423,8 +419,8 @@
                         <div style="font-size:1.5em;color:#1976d2;font-weight:800;margin-bottom:0.5em;">
                             ¡Gracias por llenar la encuesta!
                         </div>
-                        <div style="font-size:1.1em;color:#1a355e;margin-bottom:0.7em;">
-                            Estaremos en contacto contigo pronto para discutir las opciones disponibles.
+                        <div style="font-size:1.1em;color:#e74c3c;margin-bottom:0.7em;">
+                            Hubo un problema al procesar tu información. Por favor intenta nuevamente.
                         </div>`;
                 }
             } catch (e) {
