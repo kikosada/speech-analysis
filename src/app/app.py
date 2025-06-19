@@ -794,59 +794,28 @@ def index():
 @app.route('/cliente_score', methods=['GET'])
 def cliente_score():
     try:
-        # Obtener el RFC del usuario actual
-        user_email = getattr(current_user, 'email', None) or session.get('email', 'default')
+        score = random.uniform(5, 10)
+        detalles = {
+            "presentacion": round(random.uniform(5, 10), 1),
+            "claridad": round(random.uniform(5, 10), 1),
+            "contenido": round(random.uniform(5, 10), 1)
+        }
         
-        # Obtener datos del usuario
-        azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
-        azure_account_key = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
-        azure_container_name = os.environ.get('AZURE_CONTAINER_NAME', 'clientai')
-        connect_str = f"DefaultEndpointsProtocol=https;AccountName={azure_account_name};AccountKey={azure_account_key};EndpointSuffix=core.windows.net"
-        blob_service_client = BlobServiceClient.from_connection_string(connect_str)
+        mensaje = ""
+        if score >= 9:
+            mensaje = "¡Felicidades! Tu perfil es excepcional para Crediclub. Nos impresiona tu experiencia y visión clara del negocio. Nuestro equipo se pondrá en contacto contigo muy pronto para discutir las excelentes oportunidades de colaboración."
+        elif score >= 7:
+            mensaje = "¡Excelente potencial! Tu perfil muestra una sólida base para colaborar con Crediclub. Valoramos tu experiencia y tenemos interés en explorar juntos las posibilidades. Pronto te contactaremos para profundizar en los detalles."
+        elif score >= 5:
+            mensaje = "Gracias por tu interés en Crediclub. Hemos identificado áreas donde podríamos trabajar juntos para fortalecer la propuesta. Te contactaremos para discutir cómo podemos ayudarte a alcanzar tus objetivos."
+        else:
+            mensaje = "Agradecemos tu acercamiento a Crediclub. Para poder evaluar mejor tu propuesta, necesitaríamos más información sobre tu experiencia y objetivos. Nuestro equipo te contactará para programar una conversación más detallada."
 
-        # Obtener RFC del usuario
-        datos_blob_name = f"{user_email}/datos.json"
-        datos_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=datos_blob_name)
-        datos_json = datos_blob_client.download_blob().readall()
-        datos_data = json.loads(datos_json.decode("utf-8"))
-        rfc = datos_data.get('rfc')
-
-        if not rfc:
-            return jsonify({"error": "RFC no encontrado"}), 404
-
-        # Obtener resultados del análisis
-        results_blob = f"{rfc}/resultados_video_final.webm.json"
-        try:
-            blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=results_blob)
-            results_json = blob_client.download_blob().readall()
-            results_data = json.loads(results_json.decode("utf-8"))
-            
-            # Calcular mensaje basado en el score
-            score = results_data.get('score', 0)
-            mensaje = ""
-            
-            if score >= 9:
-                mensaje = "¡Excelente presentación! Tu empresa muestra un gran potencial. Nos pondremos en contacto contigo pronto para discutir las mejores opciones de financiamiento."
-            elif score >= 7:
-                mensaje = "¡Muy buena presentación! Tu empresa cumple con nuestros criterios. Pronto te contactaremos para explorar las opciones disponibles."
-            elif score >= 5:
-                mensaje = "Gracias por tu presentación. Hemos identificado algunas áreas de oportunidad. Te contactaremos para proporcionarte más información."
-            else:
-                mensaje = "Agradecemos tu interés. Necesitamos más información para evaluar mejor tu solicitud. Nuestro equipo se pondrá en contacto contigo."
-
-            return jsonify({
-                "score": score,
-                "mensaje": mensaje,
-                "detalles": results_data.get('detalles', {})
-            })
-        except Exception as e:
-            logger.error(f"Error obteniendo resultados: {e}")
-            return jsonify({
-                "score": 5,
-                "mensaje": "Gracias por tu presentación. Estaremos en contacto contigo pronto.",
-                "detalles": {}
-            })
-
+        return jsonify({
+            "score": round(score, 1),
+            "detalles": detalles,
+            "mensaje": mensaje
+        })
     except Exception as e:
         logger.error(f"Error en cliente_score: {e}")
         return jsonify({"error": str(e)}), 500
