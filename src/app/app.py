@@ -794,10 +794,10 @@ def index():
 @app.route('/cliente_score', methods=['GET'])
 def cliente_score():
     try:
-        # Score base de 7 para todos
-        score = 7.0
+        # Score base de 0 cuando no hay contenido
+        score = 0.0
         
-        mensaje = "¡Excelente potencial! Tu perfil muestra una sólida base para colaborar con Crediclub. Valoramos tu interés y tenemos interés en explorar juntos las posibilidades. Pronto te contactaremos para profundizar en los detalles."
+        mensaje = "No pudimos detectar audio en tu presentación. Por favor, asegúrate de que tu micrófono esté funcionando correctamente y que estés hablando durante la grabación. Te invitamos a intentar nuevamente."
 
         return jsonify({
             "score": score,
