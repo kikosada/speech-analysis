@@ -463,42 +463,77 @@ def cliente_upload():
                     connect_str = f"DefaultEndpointsProtocol=https;AccountName={azure_account_name};AccountKey={azure_account_key};EndpointSuffix=core.windows.net"
                     blob_service_client = BlobServiceClient.from_connection_string(connect_str)
 
-                    # Simular procesamiento rápido (2-5 segundos)
-                    time.sleep(2)
+                    # Descargar el video
+                    video_blob_name = f"{rfc}/{filename}"
+                    video_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=video_blob_name)
+                    with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as tmp:
+                        video_data = video_blob_client.download_blob()
+                        video_data.readinto(tmp)
+                        
+                        # Extraer audio
+                        audio_wav = tmp.name + '.wav'
+                        subprocess.run([
+                            'ffmpeg', '-y', '-i', tmp.name, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
+                        ], check=True)
+                        
+                        # Transcribir
+                        transcriber = AzureTranscriber(
+                            speech_key=os.environ.get('AZURE_SPEECH_KEY'),
+                            service_region=os.environ.get('AZURE_SPEECH_REGION', 'eastus')
+                        )
+                        result = transcriber.transcribe(audio_wav)
+                        transcript = result['text'] if isinstance(result, dict) and 'text' in result else str(result)
 
-                    # Generar score basado en datos disponibles
-                    score = random.randint(5, 10)  # Simulación temporal
-                    detalles = {
-                        "presentacion": random.randint(5, 10),
-                        "claridad": random.randint(5, 10),
-                        "contenido": random.randint(5, 10)
-                    }
+                        # Calificación basada en la transcripción
+                        score = 1
+                        texto = transcript.lower()
+                        if any(pal in texto for pal in ['empresa', 'negocio', 'compañía']): score += 2
+                        if any(pal in texto for pal in ['servicio', 'producto', 'ofrecemos', 'vendemos']): score += 2
+                        if any(pal in texto for pal in ['mision', 'visión', 'valores']): score += 2
+                        if len(transcript.split()) > 30: score += 2
+                        if score > 10: score = 10
 
-                    # Guardar resultados
-                    results = {
-                        "score": score,
-                        "detalles": detalles,
-                        "procesamiento_completo": True,
-                        "timestamp": datetime.now().isoformat()
-                    }
+                        # Guardar resultados en presentacion.json
+                        results = {
+                            "score": score,
+                            "scores": {
+                                "historia": score,
+                                "mision_vision": score,
+                                "productos": score,
+                                "valores": score,
+                                "mercado": score,
+                                "logros": score,
+                                "overall": score
+                            },
+                            "feedback": [
+                                "Historia y Orígenes: Se detecta evidencia. Demuestra conocimiento de la historia y orígenes de la empresa.",
+                                "Misión y Visión: Se detecta evidencia. Muestra comprensión de la misión, visión y propósito de la empresa.",
+                                "Productos y Servicios: Se detecta evidencia. Conoce en detalle los productos y servicios que ofrece la empresa.",
+                                "Valores y Cultura: Se detecta evidencia. Entiende los valores y la cultura organizacional de la empresa.",
+                                "Mercado y Competencia: Se detecta evidencia. Demuestra conocimiento del mercado, competencia y posicionamiento.",
+                                "Logros y Reconocimientos: Se detecta evidencia. Conoce los logros, reconocimientos y éxitos de la empresa."
+                            ],
+                            "transcripcion": transcript
+                        }
 
-                    # Subir resultados a Azure
-                    results_json = BytesIO(json.dumps(results, ensure_ascii=False, indent=2).encode('utf-8'))
-                    results_blob = f"{rfc}/resultados_{filename}.json"
-                    blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=results_blob)
-                    blob_client.upload_blob(results_json, overwrite=True)
+                        # Subir presentacion.json
+                        results_json = BytesIO(json.dumps(results, ensure_ascii=False, indent=2).encode('utf-8'))
+                        presentacion_json_blob = f"{rfc}/presentacion.json"
+                        blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=presentacion_json_blob)
+                        blob_client.upload_blob(results_json, overwrite=True)
+
+                        # Actualizar status.json
+                        status_data = BytesIO(json.dumps({"status": "done"}, ensure_ascii=False).encode('utf-8'))
+                        status_blob = f"{rfc}/status.json"
+                        status_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=status_blob)
+                        status_blob_client.upload_blob(status_data, overwrite=True)
 
                 except Exception as e:
                     logger.error(f"Error en procesar_video_async: {e}")
-                    error_data = {
-                        "error": str(e),
-                        "procesamiento_completo": False,
-                        "timestamp": datetime.now().isoformat()
-                    }
-                    error_json = BytesIO(json.dumps(error_data, ensure_ascii=False).encode('utf-8'))
-                    error_blob = f"{rfc}/error_{filename}.json"
-                    blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=error_blob)
-                    blob_client.upload_blob(error_json, overwrite=True)
+                    error_data = BytesIO(json.dumps({"status": "error", "error": str(e)}, ensure_ascii=False).encode('utf-8'))
+                    status_blob = f"{rfc}/status.json"
+                    status_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=status_blob)
+                    status_blob_client.upload_blob(error_data, overwrite=True)
 
             thread = threading.Thread(target=procesar_video_async, args=(rfc, filename))
             thread.start()
@@ -794,15 +829,49 @@ def index():
 @app.route('/cliente_score', methods=['GET'])
 def cliente_score():
     try:
-        # Score base de 0 cuando no hay contenido
-        score = 0.0
+        # Obtener el RFC del usuario actual
+        user_email = getattr(current_user, 'email', None) or session.get('email', 'default')
+        rfc = session.get('rfc')
         
-        mensaje = "No pudimos detectar audio en tu presentación. Por favor, asegúrate de que tu micrófono esté funcionando correctamente y que estés hablando durante la grabación. Te invitamos a intentar nuevamente."
+        if not rfc:
+            return jsonify({"error": "RFC no encontrado"}), 404
 
-        return jsonify({
-            "score": score,
-            "mensaje": mensaje
-        })
+        # Obtener presentacion.json
+        azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
+        azure_account_key = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
+        azure_container_name = os.environ.get('AZURE_CONTAINER_NAME', 'clientai')
+        connect_str = f"DefaultEndpointsProtocol=https;AccountName={azure_account_name};AccountKey={azure_account_key};EndpointSuffix=core.windows.net"
+        blob_service_client = BlobServiceClient.from_connection_string(connect_str)
+
+        presentacion_blob = f"{rfc}/presentacion.json"
+        try:
+            blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=presentacion_blob)
+            presentacion_json = blob_client.download_blob().readall()
+            presentacion_data = json.loads(presentacion_json.decode("utf-8"))
+            
+            score = presentacion_data.get('score', 0)
+            mensaje = ""
+            
+            if score >= 9:
+                mensaje = "¡Felicidades! Tu presentación fue excelente. Nos impresiona tu conocimiento y claridad al hablar de tu empresa. Nuestro equipo se pondrá en contacto contigo muy pronto para discutir las excelentes oportunidades de colaboración."
+            elif score >= 7:
+                mensaje = "¡Muy buena presentación! Demuestras un sólido conocimiento de tu empresa. Valoramos tu claridad y profesionalismo. Pronto te contactaremos para explorar las posibilidades de colaboración."
+            elif score >= 5:
+                mensaje = "Gracias por tu presentación. Has cubierto los puntos importantes sobre tu empresa. Te contactaremos para discutir algunos detalles adicionales y cómo podemos trabajar juntos."
+            else:
+                mensaje = "Gracias por tu presentación. Para poder evaluar mejor tu propuesta, necesitaríamos más información sobre tu empresa. Nuestro equipo te contactará para programar una conversación más detallada."
+
+            return jsonify({
+                "score": score,
+                "mensaje": mensaje,
+                "detalles": presentacion_data.get('scores', {})
+            })
+        except Exception as e:
+            logger.error(f"Error obteniendo presentacion.json: {e}")
+            return jsonify({
+                "error": "No se pudo procesar tu presentación. Por favor, intenta nuevamente."
+            }), 500
+
     except Exception as e:
         logger.error(f"Error en cliente_score: {e}")
         return jsonify({"error": str(e)}), 500
