@@ -354,119 +354,67 @@
             };
 
             try {
+                showStep(5);
+                document.getElementById('processingMsg').style.display = 'block';
+                document.getElementById('finalMsg').style.display = 'none';
+
+                // Guardar datos
                 const response = await fetch('/cliente_datos', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(datos)
                 });
 
-                if (response.ok) {
-                    showStep(5);
-                    document.getElementById('processingMsg').style.display = 'block';
-                    document.getElementById('finalMsg').style.display = 'none';
+                if (!response.ok) {
+                    throw new Error('Error al guardar los datos');
+                }
 
-                    // Esperar mínimo 2 segundos
-                    await new Promise(resolve => setTimeout(resolve, 2000));
+                // Esperar mínimo 2 segundos
+                await new Promise(resolve => setTimeout(resolve, 2000));
 
-                    // Verificar estado y obtener score
-                    let attempts = 0;
-                    const maxAttempts = 5; // Máximo 5 intentos (5 segundos)
-                    const checkStatus = async () => {
-                        try {
-                            const statusResponse = await fetch(`/cliente_status?rfc=${datos.rfc}`);
-                            if (statusResponse.ok) {
-                                const statusData = await statusResponse.json();
-                                if (statusData.status === 'done') {
-                                    const scoreResponse = await fetch('/cliente_score');
-                                    if (scoreResponse.ok) {
-                                        const scoreData = await scoreResponse.json();
-                                        document.getElementById('processingMsg').style.display = 'none';
-                                        document.getElementById('finalMsg').style.display = 'block';
-                                        
-                                        // Construir mensaje detallado
-                                        let detallesHtml = '';
-                                        if (scoreData.detalles) {
-                                            detallesHtml = `
-                                                <div style="margin-top:1.5em;text-align:left;padding:1em;background:#f8f9fa;border-radius:8px;">
-                                                    <div style="font-weight:600;margin-bottom:0.5em;">Detalles de la evaluación:</div>
-                                                    <div>Presentación: ${scoreData.detalles.presentacion}/10</div>
-                                                    <div>Claridad: ${scoreData.detalles.claridad}/10</div>
-                                                    <div>Contenido: ${scoreData.detalles.contenido}/10</div>
-                                                </div>`;
-                                        }
+                try {
+                    // Intentar obtener el score
+                    const scoreResponse = await fetch('/cliente_score');
+                    const scoreData = await scoreResponse.json();
+                    
+                    document.getElementById('processingMsg').style.display = 'none';
+                    document.getElementById('finalMsg').style.display = 'block';
+                    
+                    // Construir mensaje detallado
+                    let detallesHtml = '';
+                    if (scoreData.detalles) {
+                        detallesHtml = `
+                            <div style="margin-top:1.5em;text-align:left;padding:1em;background:#f8f9fa;border-radius:8px;">
+                                <div style="font-weight:600;margin-bottom:0.5em;">Detalles de la evaluación:</div>
+                                <div>Presentación: ${scoreData.detalles.presentacion}/10</div>
+                                <div>Claridad: ${scoreData.detalles.claridad}/10</div>
+                                <div>Contenido: ${scoreData.detalles.contenido}/10</div>
+                            </div>`;
+                    }
 
-                                        document.getElementById('finalMsg').innerHTML = `
-                                            <div style="font-size:1.5em;color:#1976d2;font-weight:800;margin-bottom:0.5em;">
-                                                ¡Gracias por llenar la encuesta!
-                                            </div>
-                                            <div style="font-size:1.1em;color:#1a355e;margin-bottom:0.7em;">
-                                                ${scoreData.mensaje}
-                                            </div>
-                                            ${detallesHtml}`;
-                                        return;
-                                    }
-                                } else if (statusData.status === 'error') {
-                                    throw new Error(statusData.error || 'Error procesando el video');
-                                } else if (attempts < maxAttempts) {
-                                    attempts++;
-                                    setTimeout(checkStatus, 1000);
-                                } else {
-                                    // Timeout - obtener score de todas formas
-                                    const scoreResponse = await fetch('/cliente_score');
-                                    if (scoreResponse.ok) {
-                                        const scoreData = await scoreResponse.json();
-                                        document.getElementById('processingMsg').style.display = 'none';
-                                        document.getElementById('finalMsg').style.display = 'block';
-                                        document.getElementById('finalMsg').innerHTML = `
-                                            <div style="font-size:1.5em;color:#1976d2;font-weight:800;margin-bottom:0.5em;">
-                                                ¡Gracias por llenar la encuesta!
-                                            </div>
-                                            <div style="font-size:1.1em;color:#1a355e;margin-bottom:0.7em;">
-                                                ${scoreData.mensaje}
-                                            </div>`;
-                                    }
-                                }
-                            }
-                        } catch (error) {
-                            console.error('Error:', error);
-                            // Intentar obtener score de todas formas
-                            try {
-                                const scoreResponse = await fetch('/cliente_score');
-                                if (scoreResponse.ok) {
-                                    const scoreData = await scoreResponse.json();
-                                    document.getElementById('processingMsg').style.display = 'none';
-                                    document.getElementById('finalMsg').style.display = 'block';
-                                    document.getElementById('finalMsg').innerHTML = `
-                                        <div style="font-size:1.5em;color:#1976d2;font-weight:800;margin-bottom:0.5em;">
-                                            ¡Gracias por llenar la encuesta!
-                                        </div>
-                                        <div style="font-size:1.1em;color:#1a355e;margin-bottom:0.7em;">
-                                            ${scoreData.mensaje}
-                                        </div>`;
-                                }
-                            } catch (e) {
-                                document.getElementById('processingMsg').style.display = 'none';
-                                document.getElementById('finalMsg').style.display = 'block';
-                                document.getElementById('finalMsg').innerHTML = `
-                                    <div style="font-size:1.5em;color:#1976d2;font-weight:800;margin-bottom:0.5em;">
-                                        ¡Gracias por llenar la encuesta!
-                                    </div>
-                                    <div style="font-size:1.1em;color:#1a355e;margin-bottom:0.7em;">
-                                        Estaremos en contacto contigo pronto.
-                                    </div>`;
-                            }
-                        }
-                    };
-
-                    // Iniciar verificación
-                    checkStatus();
-                } else {
-                    const data = await response.json();
-                    alert(data.error || 'Error al guardar los datos.');
+                    document.getElementById('finalMsg').innerHTML = `
+                        <div style="font-size:1.5em;color:#1976d2;font-weight:800;margin-bottom:0.5em;">
+                            ¡Gracias por llenar la encuesta!
+                        </div>
+                        <div style="font-size:1.1em;color:#1a355e;margin-bottom:0.7em;">
+                            ${scoreData.mensaje || '¡Tus respuestas han sido enviadas correctamente!'}
+                        </div>
+                        ${detallesHtml}`;
+                } catch (error) {
+                    console.error('Error obteniendo score:', error);
+                    document.getElementById('processingMsg').style.display = 'none';
+                    document.getElementById('finalMsg').style.display = 'block';
+                    document.getElementById('finalMsg').innerHTML = `
+                        <div style="font-size:1.5em;color:#1976d2;font-weight:800;margin-bottom:0.5em;">
+                            ¡Gracias por llenar la encuesta!
+                        </div>
+                        <div style="font-size:1.1em;color:#1a355e;margin-bottom:0.7em;">
+                            Estaremos en contacto contigo pronto para discutir las opciones disponibles.
+                        </div>`;
                 }
             } catch (e) {
                 console.error('Error:', e);
-                alert('Error al guardar los datos.');
+                alert('Error al guardar los datos. Por favor intenta de nuevo.');
             }
         } else {
             alert('Por favor describe tu objetivo con Crediclub.');
