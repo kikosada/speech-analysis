@@ -375,6 +375,9 @@
                 try {
                     // Intentar obtener el score
                     const scoreResponse = await fetch('/cliente_score');
+                    if (!scoreResponse.ok) {
+                        throw new Error('Error obteniendo la evaluación');
+                    }
                     const scoreData = await scoreResponse.json();
                     
                     document.getElementById('processingMsg').style.display = 'none';
@@ -397,7 +400,7 @@
                             ¡Gracias por llenar la encuesta!
                         </div>
                         <div style="font-size:1.1em;color:#1a355e;margin-bottom:0.7em;">
-                            ${scoreData.mensaje || '¡Tus respuestas han sido enviadas correctamente!'}
+                            ${scoreData.mensaje}
                         </div>
                         ${detallesHtml}`;
                 } catch (error) {
