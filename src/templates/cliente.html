@@ -321,15 +321,15 @@
                 if (attempts < maxAttempts) {
                     setTimeout(checkStatus, interval);
                 } else {
-                    // Timeout - mostrar mensaje genérico
+                    // Timeout - mostrar mensaje de error
                     document.getElementById('processingMsg').style.display = 'none';
                     document.getElementById('finalMsg').style.display = 'block';
                     document.getElementById('finalMsg').innerHTML = `
                         <div style="font-size:1.5em;color:#1976d2;font-weight:800;margin-bottom:0.5em;">
                             ¡Gracias por llenar la encuesta!
                         </div>
-                        <div style="font-size:1.1em;color:#1a355e;margin-bottom:0.7em;">
-                            Estaremos en contacto contigo pronto para discutir las opciones disponibles.
+                        <div style="font-size:1.1em;color:#e74c3c;margin-bottom:0.7em;">
+                            Hubo un problema al procesar tu información. Por favor intenta nuevamente.
                         </div>`;
                 }
             } catch (error) {
@@ -340,8 +340,8 @@
                     <div style="font-size:1.5em;color:#1976d2;font-weight:800;margin-bottom:0.5em;">
                         ¡Gracias por llenar la encuesta!
                     </div>
-                    <div style="font-size:1.1em;color:#1a355e;margin-bottom:0.7em;">
-                        Estaremos en contacto contigo pronto para discutir las opciones disponibles.
+                    <div style="font-size:1.1em;color:#e74c3c;margin-bottom:0.7em;">
+                        Hubo un problema al procesar tu información. Por favor intenta nuevamente.
                     </div>`;
             }
         };
