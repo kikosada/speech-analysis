@@ -1,4 +1,6 @@
 # =============================================
+# VERSIÓN: 2024-06-19 - Actualización de credenciales Azure Storage y Video Indexer
+# =============================================
 # 1. IMPORTS Y CONFIGURACIÓN INICIAL
 # =============================================
 import os
@@ -28,16 +30,32 @@ from flask_sqlalchemy import SQLAlchemy
 import threading
 import requests
 
+# Configurar logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Verificar variables de entorno requeridas
+required_vars = [
+    'AZURE_STORAGE_ACCOUNT_NAME',
+    'AZURE_STORAGE_ACCOUNT_KEY',
+    'AZURE_CONTAINER_NAME',
+    'VIDEO_INDEXER_SUBSCRIPTION_KEY',
+    'VIDEO_INDEXER_ACCOUNT_ID',
+    'VIDEO_INDEXER_LOCATION'
+]
+
+missing_vars = [var for var in required_vars if not os.environ.get(var)]
+if missing_vars:
+    error_msg = f"Faltan las siguientes variables de entorno: {', '.join(missing_vars)}"
+    logger.error(error_msg)
+    raise ValueError(error_msg)
+
 app = Flask(__name__,
     template_folder='../templates',
     static_folder='../static'
 )
 app.secret_key = os.environ.get("SECRET_KEY", "supersecret")
 oauth = OAuth(app)
-
-# Configurar logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # Configurar carpeta de subidas
 UPLOAD_FOLDER = 'src/data/uploads'
