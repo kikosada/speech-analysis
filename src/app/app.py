@@ -50,6 +50,14 @@ if missing_vars:
     logger.error(error_msg)
     raise ValueError(error_msg)
 
+# --- Configuración de Azure AI Video Indexer ---
+SUBSCRIPTION_KEY = os.environ.get("VIDEO_INDEXER_SUBSCRIPTION_KEY")
+ACCOUNT_ID = os.environ.get("VIDEO_INDEXER_ACCOUNT_ID")
+LOCATION = os.environ.get("VIDEO_INDEXER_LOCATION")
+
+BASE_AUTH_URL = f"https://api.videoindexer.ai/Auth/{LOCATION}/Accounts/{ACCOUNT_ID}"
+BASE_API_URL = f"https://api.videoindexer.ai/{LOCATION}/Accounts/{ACCOUNT_ID}"
+
 app = Flask(__name__,
     template_folder='../templates',
     static_folder='../static'
