@@ -1,9 +1,11 @@
 # =============================================
+# VERSIÓN: 2024-06-19 - Actualización de credenciales Azure Storage
+# =============================================
 # 1. IMPORTS Y CONFIGURACIÓN INICIAL
 # =============================================
 from flask import Flask, jsonify, request, render_template, redirect, url_for, session, send_from_directory
 import os
-from app.transcribe import AssemblyAITranscriber as Transcriber
+from .app.transcribe import AssemblyAITranscriber as Transcriber
 from werkzeug.utils import secure_filename
 import logging
 from authlib.integrations.flask_client import OAuth
@@ -18,7 +20,7 @@ from datetime import datetime, timedelta, timezone
 import mimetypes
 import uuid
 import unicodedata
-from app.azure_transcriber import AzureTranscriber
+from .app.azure_transcriber import AzureTranscriber
 import subprocess
 import json
 
@@ -123,14 +125,28 @@ def upload_file_to_azure(file_path, blob_name, container_name=None):
     account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
     account_key = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
     if not container_name:
-        container_name = os.environ.get('AZURE_CONTAINER_NAME', 'archivos-miapp-kiko')
+        container_name = os.environ.get('AZURE_CONTAINER_NAME')
+    
+    if not all([account_name, account_key, container_name]):
+        error_msg = "Faltan variables de entorno de Azure Storage"
+        logger.error(f"{error_msg}. account_name: {bool(account_name)}, account_key: {bool(account_key)}, container_name: {bool(container_name)}")
+        raise ValueError(error_msg)
+    
+    logger.info(f"Conectando a Azure Storage. Account: {account_name}, Container: {container_name}")
     connect_str = f"DefaultEndpointsProtocol=https;AccountName={account_name};AccountKey={account_key};EndpointSuffix=core.windows.net"
-    blob_service_client = BlobServiceClient.from_connection_string(connect_str)
-    blob_client = blob_service_client.get_blob_client(container=container_name, blob=blob_name)
-    with open(file_path, "rb") as data:
-        blob_client.upload_blob(data, overwrite=True)
-    print(f"Archivo '{file_path}' subido a Azure Blob Storage como '{blob_name}' en el contenedor '{container_name}'")
-    return True
+    
+    try:
+        blob_service_client = BlobServiceClient.from_connection_string(connect_str)
+        blob_client = blob_service_client.get_blob_client(container=container_name, blob=blob_name)
+        
+        with open(file_path, "rb") as data:
+            blob_client.upload_blob(data, overwrite=True)
+        
+        logger.info(f"Archivo '{file_path}' subido exitosamente a Azure como '{blob_name}' en '{container_name}'")
+        return True
+    except Exception as e:
+        logger.error(f"Error subiendo archivo a Azure: {str(e)}")
+        raise
 
 def download_file_from_azure(blob_name, local_path, container_name=None):
     account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')

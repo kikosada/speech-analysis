@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Optional, Dict, Any, List, Tuple
 from datetime import datetime
-from app.transcriber_base import BaseTranscriber
+from .transcriber_base import BaseTranscriber
 
 def analyze_company_knowledge(text: str) -> Tuple[Dict[str, int], List[str]]:
     """

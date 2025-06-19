@@ -3,7 +3,7 @@
 # =============================================
 import os
 from flask import Flask, jsonify, request, render_template, redirect, url_for, session, send_from_directory
-from app.transcribe import AssemblyAITranscriber as Transcriber
+from .transcribe import AssemblyAITranscriber as Transcriber
 from werkzeug.utils import secure_filename
 import logging
 from authlib.integrations.flask_client import OAuth
@@ -18,7 +18,7 @@ from datetime import datetime, timedelta, timezone
 import mimetypes
 import uuid
 import unicodedata
-from app.azure_transcriber import AzureTranscriber
+from .azure_transcriber import AzureTranscriber
 import subprocess
 import json
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
@@ -26,6 +26,7 @@ from flask_session import Session
 from sqlalchemy import create_engine
 from flask_sqlalchemy import SQLAlchemy
 import threading
+import requests
 
 app = Flask(__name__,
     template_folder='../templates',
@@ -358,6 +359,21 @@ def cliente():
     # Siempre mostrar el wizard de 5 pasos
     return render_template('cliente.html')
 
+VIDEO_INDEXER_API = "http://localhost:5000/api/index-video"
+def indexar_workspace_en_azure(video_url, video_name):
+    payload = {
+        "videoUrl": video_url,
+        "videoName": video_name
+    }
+    try:
+        response = requests.post(VIDEO_INDEXER_API, json=payload)
+        response.raise_for_status()
+        data = response.json()
+        return data["videoId"]
+    except Exception as e:
+        print(f"Error al indexar workspace en Azure Video Indexer: {e}")
+        return None
+
 @app.route('/cliente_upload', methods=['POST'])
 @login_required
 def cliente_upload():
@@ -367,8 +383,8 @@ def cliente_upload():
     print('Sesión actual:', dict(session))
 
     azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
-    azure_account_key = os.environ.get('AZURE_CLIENTE_ACCOUNT_KEY')
-    azure_container_name = os.environ.get('AZURE_CLIENTE_CONTAINER', 'clienteai')
+    azure_account_key = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
+    azure_container_name = os.environ.get('AZURE_CONTAINER_NAME', 'clientai')
     connect_str = f"DefaultEndpointsProtocol=https;AccountName={azure_account_name};AccountKey={azure_account_key};EndpointSuffix=core.windows.net"
     from azure.storage.blob import BlobServiceClient
     blob_service_client = BlobServiceClient.from_connection_string(connect_str)
@@ -393,6 +409,12 @@ def cliente_upload():
         video_blob_client.upload_blob(video, overwrite=True)
         print(f"Video guardado en: {video_blob_name}")
 
+        # Si es workspace.webm, llama a Azure Video Indexer
+        if filename == 'workspace.webm':
+            video_url = f"https://{azure_account_name}.blob.core.windows.net/{azure_container_name}/{video_blob_name}"
+            video_id = indexar_workspace_en_azure(video_url, f"Workspace {rfc}")
+            print(f"Video Indexer ID: {video_id}")
+
         # Solo procesar y transcribir si el archivo es 'presentacion.webm'
         if filename == 'presentacion.webm':
             # Crear status.json con estado 'processing'
@@ -407,7 +429,7 @@ def cliente_upload():
             def procesar_video_async(rfc, filename):
                 import tempfile
                 import subprocess
-                from app.azure_transcriber import AzureTranscriber
+                from .azure_transcriber import AzureTranscriber
                 try:
                     # Descargar el video de Azure a un archivo temporal
                     with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as tmp:
@@ -482,8 +504,8 @@ def cliente_datos():
     print('Sesión actual antes de guardar:', dict(session))
     try:
         azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
-        azure_account_key = os.environ.get('AZURE_CLIENTE_ACCOUNT_KEY')
-        azure_container_name = os.environ.get('AZURE_CLIENTE_CONTAINER', 'clienteai')
+        azure_account_key = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
+        azure_container_name = os.environ.get('AZURE_CONTAINER_NAME', 'clientai')
         connect_str = f"DefaultEndpointsProtocol=https;AccountName={azure_account_name};AccountKey={azure_account_key};EndpointSuffix=core.windows.net"
         blob_service_client = BlobServiceClient.from_connection_string(connect_str)
 
@@ -517,8 +539,8 @@ def cliente_datos():
 def api_cliente_upload():
     from azure.storage.blob import BlobServiceClient
     azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
-    azure_account_key = os.environ.get('AZURE_CLIENTE_ACCOUNT_KEY')
-    azure_container_name = os.environ.get('AZURE_CLIENTE_CONTAINER', 'clienteai')
+    azure_account_key = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
+    azure_container_name = os.environ.get('AZURE_CONTAINER_NAME', 'clientai')
     connect_str = f"DefaultEndpointsProtocol=https;AccountName={azure_account_name};AccountKey={azure_account_key};EndpointSuffix=core.windows.net"
     blob_service_client = BlobServiceClient.from_connection_string(connect_str)
     # Verificar API key
@@ -612,8 +634,8 @@ def api_cliente_upload():
 def api_cliente_analysis(rfc):
     from azure.storage.blob import BlobServiceClient
     azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
-    azure_account_key = os.environ.get('AZURE_CLIENTE_ACCOUNT_KEY')
-    azure_container_name = os.environ.get('AZURE_CLIENTE_CONTAINER', 'clienteai')
+    azure_account_key = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
+    azure_container_name = os.environ.get('AZURE_CONTAINER_NAME', 'clientai')
     connect_str = f"DefaultEndpointsProtocol=https;AccountName={azure_account_name};AccountKey={azure_account_key};EndpointSuffix=core.windows.net"
     blob_service_client = BlobServiceClient.from_connection_string(connect_str)
     # Verificar API key
@@ -662,8 +684,8 @@ def api_cliente_me():
 def api_cliente_status(rfc):
     from azure.storage.blob import BlobServiceClient
     azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
-    azure_account_key = os.environ.get('AZURE_CLIENTE_ACCOUNT_KEY')
-    azure_container_name = os.environ.get('AZURE_CLIENTE_CONTAINER', 'clienteai')
+    azure_account_key = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
+    azure_container_name = os.environ.get('AZURE_CONTAINER_NAME', 'clientai')
     connect_str = f"DefaultEndpointsProtocol=https;AccountName={azure_account_name};AccountKey={azure_account_key};EndpointSuffix=core.windows.net"
     blob_service_client = BlobServiceClient.from_connection_string(connect_str)
     status_blob = f"{rfc}/status.json"
@@ -725,8 +747,8 @@ def cliente_score():
         if not rfc:
             return jsonify({'error': 'No se encontró el RFC en la sesión'}), 400
         azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
-        azure_account_key = os.environ.get('AZURE_CLIENTE_ACCOUNT_KEY')
-        azure_container_name = os.environ.get('AZURE_CLIENTE_CONTAINER', 'clienteai')
+        azure_account_key = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
+        azure_container_name = os.environ.get('AZURE_CONTAINER_NAME', 'clientai')
         connect_str = f"DefaultEndpointsProtocol=https;AccountName={azure_account_name};AccountKey={azure_account_key};EndpointSuffix=core.windows.net"
         from azure.storage.blob import BlobServiceClient
         blob_service_client = BlobServiceClient.from_connection_string(connect_str)
@@ -747,6 +769,91 @@ def cliente_score():
     except Exception as e:
         print('Error en /cliente_score:', e)
         return jsonify({'error': str(e)}), 500
+
+def evaluar_workspace_visual(insights_json):
+    score = 0
+    feedback = []
+    insights = insights_json.get('videos', [{}])[0].get('insights', {})
+
+    # --- GENTE ---
+    faces = insights.get('faces', [])
+    if len(faces) >= 2:
+        score += 2
+        feedback.append("Se detectan al menos 2 personas en el workspace.")
+    elif len(faces) == 1:
+        score += 1
+        feedback.append("Se detecta una persona en el workspace.")
+
+    # --- PRODUCTIVIDAD ---
+    objetos = set(obj.get('objectType', '').lower() for obj in insights.get('objects', []))
+    if 'computer' in objetos or 'laptop' in objetos or 'desk' in objetos or 'whiteboard' in objetos:
+        score += 2
+        feedback.append("Se detectan objetos asociados a productividad (computadora, escritorio, pizarrón, etc.).")
+
+    # --- LIMPIEZA ---
+    # No se puede inferir directamente, pero si hay pocos objetos y el escritorio está despejado, se puede asumir orden
+    if 'desk' in objetos and len(objetos) <= 5:
+        score += 1
+        feedback.append("El espacio parece ordenado (pocos objetos detectados en el escritorio).")
+
+    # --- TIPO DE INMUEBLE ---
+    tipo_inmueble = "No identificado"
+    if 'desk' in objetos or 'computer' in objetos or 'laptop' in objetos:
+        tipo_inmueble = "Oficina en edificio corporativo u oficina en casa"
+    elif 'whiteboard' in objetos:
+        tipo_inmueble = "Espacio de Co-working o sala de juntas"
+    elif 'shelf' in objetos or 'box' in objetos:
+        tipo_inmueble = "Bodega o nave industrial"
+    elif 'counter' in objetos or 'cash register' in objetos:
+        tipo_inmueble = "Local comercial a pie de calle"
+    else:
+        tipo_inmueble = "Otro (no identificado automáticamente)"
+    feedback.append(f"Tipo de inmueble detectado: {tipo_inmueble}")
+
+    return score, feedback, tipo_inmueble
+
+@app.route('/api/video-insights/<video_id>', methods=['GET'])
+def get_video_insights(video_id):
+    try:
+        access_token = get_access_token()
+        insights_response = requests.get(
+            f"{BASE_API_URL}/Videos/{video_id}/Index",
+            params={
+                'accessToken': access_token,
+                'language': 'es-ES',
+                'includeBreakdowns': 'true',
+                'includeSpeechTranscript': 'true',
+                'includeFace': 'true',
+                'includeKeywords': 'true',
+                'includeSentiment': 'true',
+                'includeTextualContent': 'true',
+                'includeTopics': 'true',
+                'includeSpeakers': 'true',
+            }
+        )
+        insights_response.raise_for_status()
+        insights_data = insights_response.json()
+        
+        # Evaluar el workspace basado en la rúbrica visual
+        score, feedback, tipo_inmueble = evaluar_workspace_visual(insights_data)
+        
+        # Añadir el score y feedback al resultado
+        insights_data['workspace_score'] = score
+        insights_data['workspace_feedback'] = feedback
+        insights_data['tipo_inmueble'] = tipo_inmueble
+        
+        # Guardar el resultado en un archivo JSON en Azure Blob Storage
+        import json
+        from io import BytesIO
+        workspace_json = BytesIO(json.dumps(insights_data, ensure_ascii=False, indent=2).encode('utf-8'))
+        workspace_json_blob = f"{video_id}/workspace.json"
+        blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=workspace_json_blob)
+        blob_client.upload_blob(workspace_json, overwrite=True)
+        
+        return jsonify(insights_data)
+    except Exception as e:
+        print(f"Error obteniendo insights: {e}")
+        return jsonify({"error": f"No se pudo obtener insights: {e}"}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
