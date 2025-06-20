@@ -17,3 +17,4 @@ psycopg2-binary==2.9.10
 flask_sqlalchemy==3.1.1
 flask_migrate==4.0.5
 flask_cors==4.0.0
+httpx==0.27.0

@@ -33,6 +33,7 @@ import shutil
 from io import BytesIO
 import random
 import openai
+import httpx
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -825,7 +826,10 @@ def get_ai_analysis(transcript):
 
     try:
         logger.info("Iniciando análisis de IA con el modelo: gpt-4o-mini")
-        client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+        client = openai.OpenAI(
+            api_key=os.environ.get("OPENAI_API_KEY"),
+            http_client=httpx.Client(proxies="") # Solución para el error de proxy en Render
+        )
         
         system_prompt = """
         Eres un analista de negocios experto de Crediclub. Tu tarea es evaluar la presentación de un emprendedor que busca financiamiento.
