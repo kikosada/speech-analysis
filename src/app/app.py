@@ -823,6 +823,7 @@ def get_ai_analysis(transcript):
         }
 
     try:
+        logger.info("Iniciando análisis de IA con el modelo: gpt-4o-mini")
         client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
         
         system_prompt = """
