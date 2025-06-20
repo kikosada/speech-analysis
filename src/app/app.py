@@ -805,6 +805,7 @@ def index():
 
 def get_ai_analysis(transcript):
     if not transcript or not transcript.strip():
+        logger.warning("La transcripción llegó vacía. Devolviendo análisis por defecto de 'sin audio'.")
         return {
             "score": 0,
             "scores": {
