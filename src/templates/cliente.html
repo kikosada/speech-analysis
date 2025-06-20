@@ -303,14 +303,7 @@
                                 </div>
                                 <div style="font-size:1.1em;color:#1a355e;margin-bottom:0.7em;">
                                     ${scoreData.mensaje}
-                                </div>
-                                ${scoreData.detalles ? `
-                                <div style="margin-top:1.5em;text-align:left;padding:1em;background:#f8f9fa;border-radius:8px;">
-                                    <div style="font-weight:600;margin-bottom:0.5em;">Detalles de la evaluación:</div>
-                                    <div>Presentación: ${scoreData.detalles.presentacion}/10</div>
-                                    <div>Claridad: ${scoreData.detalles.claridad}/10</div>
-                                    <div>Contenido: ${scoreData.detalles.contenido}/10</div>
-                                </div>` : ''}`;
+                                </div>`;
                             return;
                         }
                     } else if (data.status === 'error') {
@@ -389,25 +382,13 @@
                     document.getElementById('processingMsg').style.display = 'none';
                     document.getElementById('finalMsg').style.display = 'block';
                     
-                    let detallesHtml = '';
-                    if (scoreData.detalles) {
-                        detallesHtml = `
-                            <div style="margin-top:1.5em;text-align:left;padding:1em;background:#f8f9fa;border-radius:8px;">
-                                <div style="font-weight:600;margin-bottom:0.5em;">Detalles de la evaluación:</div>
-                                <div>Presentación: ${scoreData.detalles.presentacion}/10</div>
-                                <div>Claridad: ${scoreData.detalles.claridad}/10</div>
-                                <div>Contenido: ${scoreData.detalles.contenido}/10</div>
-                            </div>`;
-                    }
-
                     const finalMessage = `
                         <div style="font-size:1.5em;color:#1976d2;font-weight:800;margin-bottom:0.5em;">
                             ¡Gracias por llenar la encuesta!
                         </div>
                         <div style="font-size:1.1em;color:#1a355e;margin-bottom:0.7em;">
                             ${scoreData.mensaje}
-                        </div>
-                        ${detallesHtml}`;
+                        </div>`;
                     
                     console.log('Setting final message:', finalMessage);
                     document.getElementById('finalMsg').innerHTML = finalMessage;
