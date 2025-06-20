@@ -388,21 +388,61 @@ def cliente():
     print('¿Está autenticado?:', current_user.is_authenticated)
     print('Sesión actual:', dict(session))
     # Siempre mostrar el wizard de 5 pasos
-    return render_template('cliente.html')
+    return render_template('cliente.html', rfc=session.get('rfc'))
 
-VIDEO_INDEXER_API = "http://localhost:5000/api/index-video"
-def indexar_workspace_en_azure(video_url, video_name):
-    payload = {
-        "videoUrl": video_url,
-        "videoName": video_name
-    }
+# --- Lógica de Azure Video Indexer ---
+VIDEO_INDEXER_SUBSCRIPTION_KEY = os.getenv("VIDEO_INDEXER_SUBSCRIPTION_KEY")
+VIDEO_INDEXER_ACCOUNT_ID = os.getenv("VIDEO_INDEXER_ACCOUNT_ID")
+VIDEO_INDEXER_LOCATION = os.getenv("VIDEO_INDEXER_LOCATION", 'trial') # 'trial' es un buen default
+
+BASE_AUTH_URL = f"https://api.videoindexer.ai/Auth/{VIDEO_INDEXER_LOCATION}/Accounts/{VIDEO_INDEXER_ACCOUNT_ID}"
+BASE_API_URL = f"https://api.videoindexer.ai/{VIDEO_INDEXER_LOCATION}/Accounts/{VIDEO_INDEXER_ACCOUNT_ID}"
+
+def get_video_indexer_access_token():
+    """Obtiene un token de acceso para la API de Video Indexer."""
+    if not all([VIDEO_INDEXER_SUBSCRIPTION_KEY, VIDEO_INDEXER_ACCOUNT_ID]):
+        logger.error("Faltan las variables de entorno de Video Indexer.")
+        return None
     try:
-        response = requests.post(VIDEO_INDEXER_API, json=payload)
+        response = requests.get(
+            f"{BASE_AUTH_URL}/AccessToken?allowEdit=true",
+            headers={'Ocp-Apim-Subscription-Key': VIDEO_INDEXER_SUBSCRIPTION_KEY}
+        )
         response.raise_for_status()
-        data = response.json()
-        return data["videoId"]
+        return response.text
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error obteniendo access token de Video Indexer: {e}")
+        return None
+
+def indexar_workspace_en_azure(video_url, video_name):
+    try:
+        if not all([VIDEO_INDEXER_SUBSCRIPTION_KEY, VIDEO_INDEXER_ACCOUNT_ID]):
+             logger.warning("Video Indexer no configurado, omitiendo indexación de workspace.")
+             return None
+
+        access_token = get_video_indexer_access_token()
+        if not access_token:
+            return None # El error ya fue loggeado en la función de token
+
+        params = {
+            'name': video_name,
+            'videoUrl': video_url,
+            'privacy': 'Private',
+            'indexingPreset': 'Advanced',
+            'language': 'es-ES'
+        }
+        upload_response = requests.post(
+            f"{BASE_API_URL}/Videos",
+            params=params,
+            headers={'Authorization': f'Bearer {access_token}'}
+        )
+        upload_response.raise_for_status()
+        response_data = upload_response.json()
+        logger.info(f"Video Indexer respondió con: {response_data}")
+        return response_data.get('id')
+
     except Exception as e:
-        print(f"Error al indexar workspace en Azure Video Indexer: {e}")
+        logger.error(f"Error al indexar workspace en Azure Video Indexer: {e}")
         return None
 
 @app.route('/cliente_upload', methods=['POST'])
@@ -871,9 +911,22 @@ def get_ai_analysis(transcript):
             response_format={"type": "json_object"},
             temperature=0.2,
         )
-
-        analysis_data = json.loads(response.choices[0].message.content)
         
+        raw_content = response.choices[0].message.content
+        try:
+            # Intentar encontrar y parsear el JSON de la respuesta
+            json_start = raw_content.find('{')
+            json_end = raw_content.rfind('}')
+            if json_start != -1 and json_end != -1:
+                json_string = raw_content[json_start:json_end+1]
+                analysis_data = json.loads(json_string)
+            else:
+                raise ValueError("No se encontró un objeto JSON válido en la respuesta.")
+        except (json.JSONDecodeError, ValueError) as json_error:
+            logger.error(f"Error al parsear JSON de OpenAI. Error: {json_error}")
+            logger.error(f"Respuesta completa de OpenAI: {raw_content}")
+            raise # Re-lanzar la excepción para que sea capturada por el bloque superior
+
         # Calcular score promedio y añadir resumen
         scores = analysis_data.get("scores", {})
         total_score = sum(scores.values())
