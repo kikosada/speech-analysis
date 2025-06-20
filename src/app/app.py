@@ -32,6 +32,7 @@ import requests
 import shutil
 from io import BytesIO
 import random
+import openai
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -484,40 +485,16 @@ def cliente_upload():
                         result = transcriber.transcribe(audio_wav)
                         transcript = result['text'] if isinstance(result, dict) and 'text' in result else str(result)
 
-                        # Calificación basada en la transcripción
-                        score = 1
-                        texto = transcript.lower()
-                        if any(pal in texto for pal in ['empresa', 'negocio', 'compañía']): score += 2
-                        if any(pal in texto for pal in ['servicio', 'producto', 'ofrecemos', 'vendemos']): score += 2
-                        if any(pal in texto for pal in ['mision', 'visión', 'valores']): score += 2
-                        if len(transcript.split()) > 30: score += 2
-                        if score > 10: score = 10
+                        # Análisis con IA
+                        analysis_results = get_ai_analysis(transcript)
 
-                        # Guardar resultados en presentacion.json
-                        results = {
-                            "score": score,
-                            "scores": {
-                                "historia": score,
-                                "mision_vision": score,
-                                "productos": score,
-                                "valores": score,
-                                "mercado": score,
-                                "logros": score,
-                                "overall": score
-                            },
-                            "feedback": [
-                                "Historia y Orígenes: Se detecta evidencia. Demuestra conocimiento de la historia y orígenes de la empresa.",
-                                "Misión y Visión: Se detecta evidencia. Muestra comprensión de la misión, visión y propósito de la empresa.",
-                                "Productos y Servicios: Se detecta evidencia. Conoce en detalle los productos y servicios que ofrece la empresa.",
-                                "Valores y Cultura: Se detecta evidencia. Entiende los valores y la cultura organizacional de la empresa.",
-                                "Mercado y Competencia: Se detecta evidencia. Demuestra conocimiento del mercado, competencia y posicionamiento.",
-                                "Logros y Reconocimientos: Se detecta evidencia. Conoce los logros, reconocimientos y éxitos de la empresa."
-                            ],
-                            "transcripcion": transcript
-                        }
+                        if not analysis_results:
+                            raise Exception("El análisis con IA falló y no devolvió resultados.")
+
+                        analysis_results["transcripcion"] = transcript
 
                         # Subir presentacion.json
-                        results_json = BytesIO(json.dumps(results, ensure_ascii=False, indent=2).encode('utf-8'))
+                        results_json = BytesIO(json.dumps(analysis_results, ensure_ascii=False, indent=2).encode('utf-8'))
                         presentacion_json_blob = f"{rfc}/presentacion.json"
                         blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=presentacion_json_blob)
                         blob_client.upload_blob(results_json, overwrite=True)
@@ -826,6 +803,87 @@ def index():
         return redirect(url_for('cliente'))
     return redirect(url_for('login_cliente_page'))
 
+def get_ai_analysis(transcript):
+    if not transcript or not transcript.strip():
+        return {
+            "score": 0,
+            "scores": {
+                "claridad_mision": 0,
+                "comprension_problema": 0,
+                "conocimiento_mercado": 0,
+                "solidez_producto": 0
+            },
+            "feedback": {
+                "claridad_mision": "No se detectó audio o la transcripción está vacía.",
+                "comprension_problema": "No se detectó audio o la transcripción está vacía.",
+                "conocimiento_mercado": "No se detectó audio o la transcripción está vacía.",
+                "solidez_producto": "No se detectó audio o la transcripción está vacía."
+            },
+            "resumen_general": "No se pudo realizar el análisis porque no se detectó audio en la presentación."
+        }
+
+    try:
+        client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+        
+        system_prompt = """
+        Eres un analista de negocios experto de Crediclub. Tu tarea es evaluar la presentación de un emprendedor que busca financiamiento.
+        Analiza la transcripción proporcionada y califica de 0 a 10 los siguientes cuatro criterios. Sé estricto y objetivo.
+        Además de la calificación numérica, proporciona una justificación breve y constructiva para cada criterio.
+        Finalmente, calcula un score general promediando las cuatro calificaciones.
+
+        CRITERIOS DE EVALUACIÓN:
+        1.  **Claridad de la Misión y Visión (claridad_mision):** ¿El emprendedor explica claramente el propósito y las metas a largo plazo de su empresa? No basta con mencionar las palabras "misión" o "visión".
+        2.  **Comprensión del Problema (comprension_problema):** ¿Describe de forma convincente el problema que su negocio resuelve para los clientes?
+        3.  **Conocimiento del Mercado (conocimiento_mercado):** ¿Demuestra entender quiénes son sus clientes, su tamaño de mercado y quién es su competencia?
+        4.  **Solidez del Producto/Servicio (solidez_producto):** ¿La descripción de lo que ofrece es clara, concreta y atractiva?
+
+        La transcripción del usuario es:
+        "{transcript}"
+
+        Devuelve tu análisis únicamente en formato JSON, sin texto adicional antes o después. La estructura debe ser la siguiente:
+        {
+          "scores": {
+            "claridad_mision": <calificación_numerica>,
+            "comprension_problema": <calificación_numerica>,
+            "conocimiento_mercado": <calificación_numerica>,
+            "solidez_producto": <calificación_numerica>
+          },
+          "feedback": {
+            "claridad_mision": "<justificación>",
+            "comprension_problema": "<justificación>",
+            "conocimiento_mercado": "<justificación>",
+            "solidez_producto": "<justificación>"
+          }
+        }
+        """
+
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": system_prompt.format(transcript=transcript)}
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.2,
+        )
+
+        analysis_data = json.loads(response.choices[0].message.content)
+        
+        # Calcular score promedio y añadir resumen
+        scores = analysis_data.get("scores", {})
+        total_score = sum(scores.values())
+        num_scores = len(scores)
+        average_score = round(total_score / num_scores, 1) if num_scores > 0 else 0
+        analysis_data["score"] = average_score
+
+        resumen_parts = [f"- {key.replace('_', ' ').title()}: {value}" for key, value in analysis_data.get("feedback", {}).items()]
+        analysis_data["resumen_general"] = "\\n".join(resumen_parts)
+        
+        return analysis_data
+
+    except Exception as e:
+        logger.error(f"Error en el análisis con OpenAI: {e}")
+        return None
+
 @app.route('/cliente_score', methods=['GET'])
 def cliente_score():
     try:
@@ -852,19 +910,20 @@ def cliente_score():
             score = presentacion_data.get('score', 0)
             mensaje = ""
             
-            if score >= 9:
-                mensaje = "¡Felicidades! Tu presentación fue excelente. Nos impresiona tu conocimiento y claridad al hablar de tu empresa. Nuestro equipo se pondrá en contacto contigo muy pronto para discutir las excelentes oportunidades de colaboración."
-            elif score >= 7:
-                mensaje = "¡Muy buena presentación! Demuestras un sólido conocimiento de tu empresa. Valoramos tu claridad y profesionalismo. Pronto te contactaremos para explorar las posibilidades de colaboración."
-            elif score >= 5:
-                mensaje = "Gracias por tu presentación. Has cubierto los puntos importantes sobre tu empresa. Te contactaremos para discutir algunos detalles adicionales y cómo podemos trabajar juntos."
+            if score >= 8:
+                mensaje = "¡Felicidades! Tu presentación fue excelente y demuestra un profundo conocimiento de tu negocio. Nuestro equipo se pondrá en contacto contigo muy pronto para discutir las excelentes oportunidades de colaboración."
+            elif score >= 6:
+                mensaje = "¡Muy buena presentación! Tienes una base sólida y comunicas bien tus ideas. Pronto te contactaremos para explorar con más detalle las posibilidades de colaboración."
+            elif score >= 4:
+                mensaje = "Gracias por tu presentación. Se notan los fundamentos de tu idea de negocio. Hemos identificado algunas áreas que se pueden fortalecer y te contactaremos para platicar sobre cómo podemos apoyarte."
             else:
-                mensaje = "Gracias por tu presentación. Para poder evaluar mejor tu propuesta, necesitaríamos más información sobre tu empresa. Nuestro equipo te contactará para programar una conversación más detallada."
+                mensaje = "Gracias por tu presentación. Para poder evaluar mejor tu propuesta, te recomendamos estructurar con más claridad tus ideas sobre el problema que resuelves y tu mercado. Nuestro equipo se pondrá en contacto contigo."
 
             return jsonify({
                 "score": score,
                 "mensaje": mensaje,
-                "detalles": presentacion_data.get('scores', {})
+                "detalles": presentacion_data.get('feedback', {}),
+                "scores": presentacion_data.get('scores', {})
             })
         except Exception as e:
             logger.error(f"Error obteniendo presentacion.json: {e}")
