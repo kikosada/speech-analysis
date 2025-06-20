@@ -925,7 +925,33 @@ def get_ai_analysis(transcript):
         except (json.JSONDecodeError, ValueError) as json_error:
             logger.error(f"Error al parsear JSON de OpenAI. Error: {json_error}")
             logger.error(f"Respuesta completa de OpenAI: {raw_content}")
-            raise # Re-lanzar la excepción para que sea capturada por el bloque superior
+            
+            # Intentar limpiar la respuesta y parsear de nuevo
+            try:
+                # Eliminar posibles bloques de código markdown
+                cleaned_content = raw_content
+                if '```json' in cleaned_content:
+                    start = cleaned_content.find('```json') + 7
+                    end = cleaned_content.find('```', start)
+                    if end != -1:
+                        cleaned_content = cleaned_content[start:end]
+                elif '```' in cleaned_content:
+                    start = cleaned_content.find('```') + 3
+                    end = cleaned_content.find('```', start)
+                    if end != -1:
+                        cleaned_content = cleaned_content[start:end]
+                
+                # Limpiar espacios en blanco y saltos de línea
+                cleaned_content = cleaned_content.strip()
+                
+                # Intentar parsear directamente
+                analysis_data = json.loads(cleaned_content)
+                logger.info("JSON parseado exitosamente después de limpieza")
+                
+            except (json.JSONDecodeError, ValueError) as second_error:
+                logger.error(f"Error en segundo intento de parsing: {second_error}")
+                logger.error(f"Contenido limpio: {cleaned_content}")
+                raise # Re-lanzar la excepción para que sea capturada por el bloque superior
 
         # Calcular score promedio y añadir resumen
         scores = analysis_data.get("scores", {})
