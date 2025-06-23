@@ -905,16 +905,27 @@ def get_ai_analysis(transcript):
         """
 
         logger.info("Llamando a OpenAI...")
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_prompt.format(transcript=transcript)}
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.2,
-        )
-        raw_content = response.choices[0].message.content
-        logger.info(f"Respuesta cruda de OpenAI: {raw_content}")
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": system_prompt.format(transcript=transcript)}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.2,
+            )
+            raw_content = response.choices[0].message.content
+            logger.info(f"Respuesta cruda de OpenAI: {raw_content}")
+        except Exception as e:
+            logger.error(f"Excepción al llamar a OpenAI: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            # Si la respuesta tiene algún contenido, loguéalo
+            try:
+                logger.error(f"Respuesta de OpenAI (objeto): {response}")
+            except Exception:
+                logger.error("No se pudo acceder al objeto de respuesta de OpenAI.")
+            raise  # Re-lanzar la excepción para que el flujo de error siga igual
         try:
             # Intentar encontrar y parsear el JSON de la respuesta
             json_start = raw_content.find('{')
