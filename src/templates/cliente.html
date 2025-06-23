@@ -189,6 +189,10 @@
                    pattern="^([A-ZÑ&]{3,4})(\d{6})([A-Z\d]{3})$" 
                    title="El RFC debe tener el formato correcto, ejemplo: XAXX010101000"
                    style="width:100%;padding:0.7em;margin:0.5em 0 0.5em 0;font-size:1.1em;border-radius:8px;border:1.5px solid #d1d5db;text-transform:uppercase;">
+            <input type="tel" id="telefono" placeholder="Número de teléfono" required 
+                   pattern="^[0-9]{10}$"
+                   title="Ingresa un número de teléfono válido de 10 dígitos"
+                   style="width:100%;padding:0.7em;margin:0.5em 0 0.5em 0;font-size:1.1em;border-radius:8px;border:1.5px solid #d1d5db;">
             <button id="nextBtn1" class="record-btn">Siguiente</button>
         </div>
         <!-- Paso 2: Video presentación (frontal) -->
@@ -348,6 +352,7 @@
                 nombreCompleto: document.getElementById('nombreCompleto').value.trim(),
                 nombreEmpresa: document.getElementById('nombreEmpresa').value.trim(),
                 rfc: document.getElementById('rfc').value.trim().toUpperCase(),
+                telefono: document.getElementById('telefono').value.trim(),
                 numCreditos: document.getElementById('numCreditos').value.trim(),
                 planesCredito: document.getElementById('planesCredito').value.trim(),
                 objetivoCrediclub: document.getElementById('objetivoCrediclub').value.trim()
