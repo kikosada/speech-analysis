@@ -382,49 +382,14 @@
                     document.getElementById('processingMsg').style.display = 'none';
                     document.getElementById('finalMsg').style.display = 'block';
                     
-                    let detallesHtml = '';
-                    if (scoreData.scores && scoreData.detalles) {
-                        const labels = {
-                            "claridad_mision": "Claridad de Misión y Visión",
-                            "comprension_problema": "Comprensión del Problema",
-                            "conocimiento_mercado": "Conocimiento del Mercado",
-                            "solidez_producto": "Solidez del Producto/Servicio"
-                        };
-
-                        detallesHtml += '<div style="margin-top:1.5em; text-align:left; padding:1em; background-color:#f8f9fa; border-radius:8px;">';
-                        detallesHtml += `<div style="font-weight:bold; font-size:1.2em; margin-bottom:1em; color:#1a355e;">Puntuación General: ${scoreData.score}/10</div>`;
-                        detallesHtml += '<div style="font-weight:600; margin-bottom:1em;">Desglose de la Evaluación:</div>';
-
-                        for (const key in scoreData.scores) {
-                            const scoreValue = scoreData.scores[key];
-                            const feedback = scoreData.detalles[key];
-                            const label = labels[key] || key;
-                            const color = scoreValue >= 8 ? '#27ae60' : scoreValue >= 5 ? '#f39c12' : '#e74c3c';
-
-                            detallesHtml += `<div style="margin-bottom: 1em;">`;
-                            detallesHtml += `  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.3em;">`;
-                            detallesHtml += `    <span style="font-weight:500;">${label}</span>`;
-                            detallesHtml += `    <span style="font-weight:bold; color:${color};">${scoreValue}/10</span>`;
-                            detallesHtml += `  </div>`;
-                            detallesHtml += `  <div style="width:100%; background-color:#e0e0e0; border-radius:5px; height:8px; overflow:hidden;">`;
-                            detallesHtml += `    <div style="width:${scoreValue * 10}%; background-color:${color}; height:100%;"></div>`;
-                            detallesHtml += `  </div>`;
-                            detallesHtml += `  <div style="font-size:0.9em; color:#555; margin-top:0.4em;">${feedback}</div>`;
-                            detallesHtml += `</div>`;
-                        }
-                        detallesHtml += '</div>';
-                    }
-
+                    // Solo mostrar mensaje final, sin puntuaciones ni desglose
                     const finalMessage = `
                         <div style="font-size:1.5em;color:#1976d2;font-weight:800;margin-bottom:0.5em;">
                             ¡Gracias por llenar la encuesta!
                         </div>
                         <div style="font-size:1.1em;color:#1a355e;margin-bottom:0.7em;">
                             ${scoreData.mensaje}
-                        </div>
-                        ${detallesHtml}`;
-                    
-                    console.log('Setting final message:', finalMessage);
+                        </div>`;
                     document.getElementById('finalMsg').innerHTML = finalMessage;
                 } catch (error) {
                     console.error('Error obteniendo score:', error);

@@ -865,7 +865,8 @@ def get_ai_analysis(transcript):
         }
 
     try:
-        logger.info("Iniciando análisis de IA con el modelo: gpt-4o-mini")
+        logger.info(f"Iniciando análisis de IA con el modelo: gpt-4o-mini")
+        logger.info(f"Transcripción enviada a OpenAI (primeros 300 caracteres): {transcript[:300]}")
         client = openai.OpenAI(
             api_key=os.environ.get("OPENAI_API_KEY"),
             http_client=httpx.Client(proxies="") # Solución para el error de proxy en Render
@@ -903,6 +904,7 @@ def get_ai_analysis(transcript):
         }
         """
 
+        logger.info("Llamando a OpenAI...")
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -911,8 +913,8 @@ def get_ai_analysis(transcript):
             response_format={"type": "json_object"},
             temperature=0.2,
         )
-        
         raw_content = response.choices[0].message.content
+        logger.info(f"Respuesta cruda de OpenAI: {raw_content}")
         try:
             # Intentar encontrar y parsear el JSON de la respuesta
             json_start = raw_content.find('{')
@@ -925,11 +927,11 @@ def get_ai_analysis(transcript):
         except (json.JSONDecodeError, ValueError) as json_error:
             logger.error(f"Error al parsear JSON de OpenAI. Error: {json_error}")
             logger.error(f"Respuesta completa de OpenAI: {raw_content}")
-            
             # Intentar limpiar la respuesta y parsear de nuevo
             try:
-                # Eliminar posibles bloques de código markdown
+                # Eliminar posibles bloques de código markdown y texto extra
                 cleaned_content = raw_content
+                # Quitar bloque ```json ... ```
                 if '```json' in cleaned_content:
                     start = cleaned_content.find('```json') + 7
                     end = cleaned_content.find('```', start)
@@ -940,31 +942,29 @@ def get_ai_analysis(transcript):
                     end = cleaned_content.find('```', start)
                     if end != -1:
                         cleaned_content = cleaned_content[start:end]
-                
-                # Limpiar espacios en blanco y saltos de línea
+                # Quitar líneas antes del primer '{' y después del último '}'
+                json_start = cleaned_content.find('{')
+                json_end = cleaned_content.rfind('}')
+                if json_start != -1 and json_end != -1:
+                    cleaned_content = cleaned_content[json_start:json_end+1]
                 cleaned_content = cleaned_content.strip()
-                
-                # Intentar parsear directamente
+                logger.info(f"Intentando parsear contenido limpio: {cleaned_content}")
                 analysis_data = json.loads(cleaned_content)
                 logger.info("JSON parseado exitosamente después de limpieza")
-                
             except (json.JSONDecodeError, ValueError) as second_error:
                 logger.error(f"Error en segundo intento de parsing: {second_error}")
                 logger.error(f"Contenido limpio: {cleaned_content}")
                 raise # Re-lanzar la excepción para que sea capturada por el bloque superior
-
         # Calcular score promedio y añadir resumen
         scores = analysis_data.get("scores", {})
         total_score = sum(scores.values())
         num_scores = len(scores)
         average_score = round(total_score / num_scores, 1) if num_scores > 0 else 0
         analysis_data["score"] = average_score
-
         resumen_parts = [f"- {key.replace('_', ' ').title()}: {value}" for key, value in analysis_data.get("feedback", {}).items()]
-        analysis_data["resumen_general"] = "\\n".join(resumen_parts)
-        
+        analysis_data["resumen_general"] = "\n".join(resumen_parts)
+        logger.info(f"Análisis IA final: {analysis_data}")
         return analysis_data
-
     except Exception as e:
         logger.error(f"Error en el análisis con OpenAI: {e}")
         return None
