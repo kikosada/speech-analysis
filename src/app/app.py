@@ -888,20 +888,20 @@ def get_ai_analysis(transcript):
         "{transcript}"
 
         Devuelve tu análisis únicamente en formato JSON, sin texto adicional antes o después. La estructura debe ser la siguiente:
-        {
-          "scores": {
+        {{
+          "scores": {{
             "claridad_mision": <calificación_numerica>,
             "comprension_problema": <calificación_numerica>,
             "conocimiento_mercado": <calificación_numerica>,
             "solidez_producto": <calificación_numerica>
-          },
-          "feedback": {
+          }},
+          "feedback": {{
             "claridad_mision": "<justificación>",
             "comprension_problema": "<justificación>",
             "conocimiento_mercado": "<justificación>",
             "solidez_producto": "<justificación>"
-          }
-        }
+          }}
+        }}
         """
 
         logger.info("Llamando a OpenAI...")
