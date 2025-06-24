@@ -866,7 +866,7 @@ def get_ai_analysis(transcript):
 
     try:
         logger.info(f"Iniciando análisis de IA con el modelo: gpt-4o-mini")
-        logger.info(f"Transcripción enviada a OpenAI (primeros 300 caracteres): {transcript[:300]}")
+        logger.info(f"Transcripción enviada a OpenAI: {transcript}")
         client = openai.OpenAI(
             api_key=os.environ.get("OPENAI_API_KEY"),
             http_client=httpx.Client(proxies="") # Solución para el error de proxy en Render
