@@ -1183,6 +1183,79 @@ def cliente_upload_chunk():
         logger.error(f"Error en cliente_upload_chunk: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/asesor', methods=['GET', 'POST'])
+def asesor_dashboard():
+    if request.method == 'POST':
+        password = request.form.get('password')
+        if password == 'crediclub2025':  # Contraseña simple
+            session['asesor_authenticated'] = True
+            return redirect('/asesor')
+        else:
+            return render_template('asesor.html', error='Contraseña incorrecta')
+    
+    # Si ya está autenticado, mostrar dashboard
+    if session.get('asesor_authenticated'):
+        try:
+            # Obtener todos los candidatos desde Azure
+            azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
+            azure_account_key = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
+            azure_container_name = os.environ.get('AZURE_CONTAINER_NAME', 'clientai')
+            connect_str = f"DefaultEndpointsProtocol=https;AccountName={azure_account_name};AccountKey={azure_account_key};EndpointSuffix=core.windows.net"
+            blob_service_client = BlobServiceClient.from_connection_string(connect_str)
+            
+            # Listar todos los blobs (carpetas RFC)
+            container_client = blob_service_client.get_container_client(azure_container_name)
+            blobs = container_client.list_blobs()
+            
+            candidatos = []
+            for blob in blobs:
+                if blob.name.endswith('/datos.json'):
+                    rfc = blob.name.split('/')[0]
+                    try:
+                        # Obtener datos del candidato
+                        datos_blob = blob_service_client.get_blob_client(container=azure_container_name, blob=blob.name)
+                        datos_json = datos_blob.download_blob().readall()
+                        datos = json.loads(datos_json.decode("utf-8"))
+                        
+                        # Obtener análisis si existe
+                        presentacion_blob = f"{rfc}/presentacion.json"
+                        try:
+                            presentacion_client = blob_service_client.get_blob_client(container=azure_container_name, blob=presentacion_blob)
+                            presentacion_json = presentacion_client.download_blob().readall()
+                            presentacion = json.loads(presentacion_json.decode("utf-8"))
+                            score = presentacion.get('score', 0)
+                        except:
+                            score = 0
+                        
+                        candidatos.append({
+                            'rfc': rfc,
+                            'nombre': datos.get('nombreCompleto', 'N/A'),
+                            'empresa': datos.get('nombreEmpresa', 'N/A'),
+                            'telefono': datos.get('telefono', 'N/A'),
+                            'score': score,
+                            'fecha': blob.last_modified.strftime('%d/%m/%Y %H:%M') if blob.last_modified else 'N/A'
+                        })
+                    except Exception as e:
+                        logger.error(f"Error procesando candidato {rfc}: {e}")
+                        continue
+            
+            # Ordenar por fecha (más recientes primero)
+            candidatos.sort(key=lambda x: x['fecha'], reverse=True)
+            
+            return render_template('asesor.html', candidatos=candidatos, authenticated=True)
+            
+        except Exception as e:
+            logger.error(f"Error en dashboard asesor: {e}")
+            return render_template('asesor.html', error='Error al cargar los datos', authenticated=True)
+    
+    # Mostrar formulario de login
+    return render_template('asesor.html', authenticated=False)
+
+@app.route('/asesor/logout')
+def asesor_logout():
+    session.pop('asesor_authenticated', None)
+    return redirect('/asesor')
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     # Configuración para permitir archivos grandes y tiempos de espera más largos
