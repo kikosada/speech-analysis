@@ -223,15 +223,15 @@
         <!-- Stats -->
         <div class="stats">
             <div class="stat-card" style="border-left: 4px solid #f44336;">
-                <div class="stat-number" style="color:#f44336;">{{ candidatos|selectattr('score', '<=', 5)|list|length }}</div>
+                <div class="stat-number" style="color:#1a355e;">{{ candidatos|selectattr('score', '<=', 5)|list|length }}</div>
                 <div class="stat-label">0-5</div>
             </div>
             <div class="stat-card" style="border-left: 4px solid #ffeb3b;">
-                <div class="stat-number" style="color:#ffb300;">{{ candidatos|selectattr('score', '>', 5)|selectattr('score', '<', 8)|list|length }}</div>
+                <div class="stat-number" style="color:#1a355e;">{{ candidatos|selectattr('score', '>', 5)|selectattr('score', '<', 8)|list|length }}</div>
                 <div class="stat-label">5-8</div>
             </div>
             <div class="stat-card" style="border-left: 4px solid #4caf50;">
-                <div class="stat-number" style="color:#4caf50;">{{ candidatos|selectattr('score', '>=', 8)|list|length }}</div>
+                <div class="stat-number" style="color:#1a355e;">{{ candidatos|selectattr('score', '>=', 8)|list|length }}</div>
                 <div class="stat-label">8-10</div>
             </div>
         </div>
@@ -257,6 +257,7 @@
                     <th>Teléfono</th>
                     <th>Score</th>
                     <th>Fecha</th>
+                    <th>Presentación</th>
                 </tr>
             </thead>
             <tbody>
@@ -272,6 +273,7 @@
                         </span>
                     </td>
                     <td>{{ candidato.fecha }}</td>
+                    <td><a href="/descargar/{{ candidato.rfc }}/presentacion.webm" target="_blank">Ver</a></td>
                 </tr>
                 {% endfor %}
             </tbody>
