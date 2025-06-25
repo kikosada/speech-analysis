@@ -222,30 +222,26 @@
 
         <!-- Stats -->
         <div class="stats">
-            <div class="stat-card">
-                <div class="stat-number">{{ candidatos|length }}</div>
-                <div class="stat-label">Total Candidatos</div>
+            <div class="stat-card" style="border-left: 4px solid #f44336;">
+                <div class="stat-number" style="color:#f44336;">{{ candidatos|selectattr('score', '<=', 5)|list|length }}</div>
+                <div class="stat-label">0-5</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number">{{ candidatos|selectattr('score', '>=', 8)|list|length }}</div>
-                <div class="stat-label">Aceptados (8-10)</div>
+            <div class="stat-card" style="border-left: 4px solid #ffeb3b;">
+                <div class="stat-number" style="color:#ffb300;">{{ candidatos|selectattr('score', '>', 5)|selectattr('score', '<', 8)|list|length }}</div>
+                <div class="stat-label">5-8</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number">{{ candidatos|selectattr('score', '>=', 6)|selectattr('score', '<', 8)|list|length }}</div>
-                <div class="stat-label">En Revisión (6-7)</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number">{{ candidatos|selectattr('score', '<', 6)|list|length }}</div>
-                <div class="stat-label">Rechazados (0-5)</div>
+            <div class="stat-card" style="border-left: 4px solid #4caf50;">
+                <div class="stat-number" style="color:#4caf50;">{{ candidatos|selectattr('score', '>=', 8)|list|length }}</div>
+                <div class="stat-label">8-10</div>
             </div>
         </div>
 
         <!-- Filters -->
         <div class="filters">
-            <button class="filter-btn active" onclick="filterCandidates('all')">Todos</button>
-            <button class="filter-btn" onclick="filterCandidates('aceptados')">Aceptados</button>
-            <button class="filter-btn" onclick="filterCandidates('revision')">En Revisión</button>
-            <button class="filter-btn" onclick="filterCandidates('rechazados')">Rechazados</button>
+            <button class="filter-btn active" style="border-color:#bdbdbd;" onclick="filterCandidates('all')">Todos</button>
+            <button class="filter-btn" style="border-color:#f44336;color:#f44336;" onclick="filterCandidates('0-5')">0-5</button>
+            <button class="filter-btn" style="border-color:#ffeb3b;color:#ffb300;" onclick="filterCandidates('5-8')">5-8</button>
+            <button class="filter-btn" style="border-color:#4caf50;color:#4caf50;" onclick="filterCandidates('8-10')">8-10</button>
             <div class="search">
                 <input type="text" id="searchInput" placeholder="Buscar por nombre, empresa o RFC..." onkeyup="searchCandidates()">
             </div>
@@ -285,29 +281,25 @@
 
     <script>
         function filterCandidates(filter) {
-            // Update active button
             document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
-            
             const rows = document.querySelectorAll('.candidate-row');
             rows.forEach(row => {
                 const score = parseFloat(row.dataset.score);
                 let show = false;
-                
                 switch(filter) {
-                    case 'aceptados':
+                    case '0-5':
+                        show = score <= 5;
+                        break;
+                    case '5-8':
+                        show = score > 5 && score < 8;
+                        break;
+                    case '8-10':
                         show = score >= 8;
-                        break;
-                    case 'revision':
-                        show = score >= 6 && score < 8;
-                        break;
-                    case 'rechazados':
-                        show = score < 6;
                         break;
                     default:
                         show = true;
                 }
-                
                 row.style.display = show ? '' : 'none';
             });
         }
