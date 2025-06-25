@@ -4,7 +4,7 @@
 # 1. IMPORTS Y CONFIGURACIÓN INICIAL
 # =============================================
 import os
-from flask import Flask, jsonify, request, render_template, redirect, url_for, session, send_from_directory
+from flask import Flask, jsonify, request, render_template, redirect, url_for, session, send_from_directory, send_file
 from .transcribe import AssemblyAITranscriber as Transcriber
 from werkzeug.utils import secure_filename
 import logging
@@ -331,16 +331,28 @@ def mis_archivos():
                 empresas[empresa] = archivos
     return render_template('mis_archivos.html', empresas=empresas)
 
-@app.route('/descargar/<empresa>/<filename>')
-@login_required
-def descargar_archivo(empresa, filename):
-    user_folder = os.path.join('user_uploads', current_user.email)
-    empresa_path = os.path.join(user_folder, secure_filename(empresa))
-    # Seguridad: solo permite descargar archivos de tu carpeta
-    file_path = os.path.join(empresa_path, filename)
-    if not os.path.exists(file_path):
+@app.route('/descargar/<rfc>/<filename>')
+def descargar_archivo(rfc, filename):
+    try:
+        from azure.storage.blob import BlobServiceClient
+        import io
+        azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
+        azure_account_key = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
+        azure_container_name = os.environ.get('AZURE_CONTAINER_NAME', 'clientai')
+        connect_str = f"DefaultEndpointsProtocol=https;AccountName={azure_account_name};AccountKey={azure_account_key};EndpointSuffix=core.windows.net"
+        blob_service_client = BlobServiceClient.from_connection_string(connect_str)
+        blob_name = f"{rfc}/{filename}"
+        blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=blob_name)
+        blob_data = blob_client.download_blob().readall()
+        return send_file(
+            io.BytesIO(blob_data),
+            download_name=filename,
+            as_attachment=False,
+            mimetype='video/webm' if filename.endswith('.webm') else None
+        )
+    except Exception as e:
+        logger.error(f"Error descargando archivo de Azure: {e}")
         return "Archivo no encontrado", 404
-    return send_from_directory(empresa_path, filename, as_attachment=True)
 
 # =============================================
 # 10. RUTAS DE ASESOR Y CLIENTE
@@ -1183,6 +1195,9 @@ def cliente_upload_chunk():
         logger.error(f"Error en cliente_upload_chunk: {e}")
         return jsonify({"error": str(e)}), 500
 
+#==============================================
+# ASESOR
+#==============================================
 @app.route('/asesor', methods=['GET', 'POST'])
 def asesor_dashboard():
     if request.method == 'POST':
