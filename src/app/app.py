@@ -35,6 +35,9 @@ import random
 import openai
 import httpx
 
+# Importar la nueva API
+from .api import api_bp, init_jwt
+
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -69,6 +72,10 @@ app = Flask(__name__,
 )
 app.secret_key = os.environ.get("SECRET_KEY", "supersecret")
 oauth = OAuth(app)
+
+# Inicializar JWT y registrar la API
+init_jwt(app)
+app.register_blueprint(api_bp)
 
 # Configurar carpeta de subidas
 UPLOAD_FOLDER = 'src/data/uploads'
