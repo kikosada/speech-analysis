@@ -251,7 +251,7 @@ def analyze():
         # Transcribir el video
         audio_wav = tmp.name + '.wav'
         subprocess.run([
-            'ffmpeg', '-y', '-i', tmp.name, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
+            'ffmpeg', '-y', '-i', tmp.name, '-vn', '-filter:a', 'atempo=2.0', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
         ], check=True)
         transcriber = AzureTranscriber(
             speech_key=os.environ.get('AZURE_SPEECH_KEY'),
@@ -354,12 +354,9 @@ def descargar_archivo(rfc, filename):
         logger.error(f"Error descargando archivo de Azure: {e}")
         return "Archivo no encontrado", 404
 
-# =============================================
-# 10. RUTAS DE ASESOR Y CLIENTE
-# =============================================
 
 
-# ========== RUTAS Y LÓGICA DE ASESOR (no se necesitan ahorita) ==========
+# ==========(no se necesitan ahorita) ==========
 # @app.route('/login-asesor')
 # def login_asesor_page():
 #     if current_user.is_authenticated and session.get('tipo_login') == 'cliente':
@@ -492,11 +489,31 @@ def cliente_upload():
         video_blob_client.upload_blob(video, overwrite=True)
         print(f"Video guardado en: {video_blob_name}")
 
-        # Si es workspace.webm, llama a Azure Video Indexer
+        # Si es workspace.webm, extraer frames para análisis AI
         if filename == 'workspace.webm':
-            video_url = f"https://{azure_account_name}.blob.core.windows.net/{azure_container_name}/{video_blob_name}"
-            video_id = indexar_workspace_en_azure(video_url, f"Workspace {rfc}")
-            print(f"Video Indexer ID: {video_id}")
+            import os
+            import tempfile
+            import subprocess
+            frames_dir = tempfile.mkdtemp(prefix='frames_')
+            try:
+                # Descargar el archivo temporalmente
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as tmp_video:
+                    video_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=video_blob_name)
+                    video_data = video_blob_client.download_blob()
+                    video_data.readinto(tmp_video)
+                    tmp_video_path = tmp_video.name
+                # Extraer 1 frame cada 2 segundos
+                os.makedirs(frames_dir, exist_ok=True)
+                cmd = [
+                    'ffmpeg', '-i', tmp_video_path,
+                    '-vf', 'fps=0.5',
+                    os.path.join(frames_dir, 'frame_%03d.jpg')
+                ]
+                subprocess.run(cmd, check=True)
+                print(f"Frames extraídos en: {frames_dir}")
+                # Aquí puedes agregar el análisis con OpenAI cuando esté listo
+            except Exception as e:
+                print(f"Error extrayendo frames de workspace.webm: {e}")
 
         # Solo procesar y transcribir si el archivo es 'presentacion.webm'
         if filename == 'presentacion.webm':
@@ -527,7 +544,7 @@ def cliente_upload():
                         # Extraer audio
                         audio_wav = tmp.name + '.wav'
                         subprocess.run([
-                            'ffmpeg', '-y', '-i', tmp.name, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
+                            'ffmpeg', '-y', '-i', tmp.name, '-vn', '-filter:a', 'atempo=2.0', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
                         ], check=True)
                         
                         # Transcribir
@@ -656,7 +673,7 @@ def api_cliente_upload():
         # Transcribir el video
         audio_wav = tmp.name + '.wav'
         subprocess.run([
-            'ffmpeg', '-y', '-i', tmp.name, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
+            'ffmpeg', '-y', '-i', tmp.name, '-vn', '-filter:a', 'atempo=2.0', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
         ], check=True)
         transcriber = AzureTranscriber(
             speech_key=os.environ.get('AZURE_SPEECH_KEY'),
