@@ -143,7 +143,7 @@ Session(app)
 
 @app.before_request
 def make_session_permanent():
-    session.permanent = False
+    session.permanent = True
     print('Sesión actual:', dict(session))
     if current_user.is_authenticated:
         print('Usuario autenticado en before_request:', current_user)
@@ -469,36 +469,51 @@ def cliente_upload():
     print('¿Está autenticado?:', current_user.is_authenticated)
     print('Sesión actual:', dict(session))
 
+    # Validar variables de entorno de Azure
     azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
     azure_account_key = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
     azure_container_name = os.environ.get('AZURE_CONTAINER_NAME', 'clientai')
-    connect_str = f"DefaultEndpointsProtocol=https;AccountName={azure_account_name};AccountKey={azure_account_key};EndpointSuffix=core.windows.net"
-    from azure.storage.blob import BlobServiceClient
-    blob_service_client = BlobServiceClient.from_connection_string(connect_str)
+    
+    if not azure_account_name or not azure_account_key:
+        print('Error: Variables de entorno de Azure Storage no configuradas')
+        return jsonify({"error": "Configuración de Azure Storage incompleta"}), 500
+    
+    try:
+        connect_str = f"DefaultEndpointsProtocol=https;AccountName={azure_account_name};AccountKey={azure_account_key};EndpointSuffix=core.windows.net"
+        blob_service_client = BlobServiceClient.from_connection_string(connect_str)
+    except Exception as e:
+        print(f'Error conectando a Azure Storage: {e}')
+        return jsonify({"error": "Error de conexión con Azure Storage"}), 500
 
     try:
         rfc = session.get('rfc')
         print('RFC en sesión:', rfc)
         if not rfc:
-            return jsonify({"error": "No se encontró el RFC en la sesión"}), 400
+            print('Error: RFC no encontrado en sesión. Sesión completa:', dict(session))
+            return jsonify({"error": "No se encontró el RFC en la sesión. Por favor, completa el paso 1 primero."}), 400
 
         # Procesar el video (aceptar 'video' o 'main_video')
         video = request.files.get('video') or request.files.get('main_video')
+        print('Archivos recibidos:', list(request.files.keys()))
+        print('Video encontrado:', video is not None)
         if not video:
-            return jsonify({"error": "No se envió ningún archivo"}), 400
+            return jsonify({"error": "No se envió ningún archivo de video"}), 400
         if video.filename == '':
             return jsonify({"error": "No se seleccionó ningún archivo"}), 400
 
-        from werkzeug.utils import secure_filename
         filename = secure_filename(video.filename)
         video_blob_name = f"{rfc}/{filename}"
         video_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=video_blob_name)
-        video_blob_client.upload_blob(video, overwrite=True)
-        print(f"Video guardado en: {video_blob_name}")
+        
+        try:
+            video_blob_client.upload_blob(video, overwrite=True)
+            print(f"Video guardado exitosamente en: {video_blob_name}")
+        except Exception as e:
+            print(f'Error subiendo video a Azure: {e}')
+            return jsonify({"error": f"Error al subir el video: {str(e)}"}), 500
 
         # Si es workspace.webm, extraer frames para análisis AI
         if filename == 'workspace.webm':
-            import os
             import tempfile
             import subprocess
             frames_dir = tempfile.mkdtemp(prefix='frames_')
@@ -525,8 +540,6 @@ def cliente_upload():
         # Solo procesar y transcribir si el archivo es 'presentacion.webm'
         if filename == 'presentacion.webm':
             # Crear status.json con estado 'processing'
-            import json
-            from io import BytesIO
             status_blob = f"{rfc}/status.json"
             status_data = BytesIO(json.dumps({"status": "processing"}, ensure_ascii=False).encode('utf-8'))
             status_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=status_blob)
@@ -622,14 +635,13 @@ def cliente_datos():
         
         # Guardar RFC en la sesión
         session['rfc'] = rfc
+        session.modified = True  # Forzar la persistencia de la sesión
         print('RFC guardado en sesión:', rfc)
         print('Sesión después de guardar RFC:', dict(session))
         
         # Guardar datos.json en la carpeta del RFC (sobrescribir con toda la info final)
         folder_prefix = f"{rfc}/"
         blob_name = folder_prefix + 'datos.json'
-        import json
-        from io import BytesIO
         # No es necesario cambiar nada más, los nuevos campos ya llegan en datos
         datos_bytes = BytesIO(json.dumps(datos, ensure_ascii=False, indent=2).encode('utf-8'))
         blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=blob_name)
@@ -699,8 +711,6 @@ def api_cliente_upload():
         if score > 10: score = 10
 
         # Guardar transcripción y score como JSON
-        import json
-        from io import BytesIO
         presentacion_json = BytesIO(json.dumps({"score": score, "transcripcion": transcript}, ensure_ascii=False, indent=2).encode('utf-8'))
         presentacion_json_blob = folder_prefix + 'presentacion.json'
         print(f"Intentando guardar {presentacion_json_blob} en Azure para {folder_prefix}")
@@ -802,6 +812,17 @@ def api_cliente_status(rfc):
         return jsonify(status_data)
     except Exception as e:
         return jsonify({"status": "not_found", "error": str(e)})
+
+@app.route('/debug_session')
+@login_required
+def debug_session():
+    """Endpoint para debug de la sesión"""
+    return jsonify({
+        'session_data': dict(session),
+        'user_id': current_user.get_id() if current_user.is_authenticated else None,
+        'rfc_in_session': session.get('rfc'),
+        'authenticated': current_user.is_authenticated
+    })
 
 @app.route('/cliente_status')
 @login_required

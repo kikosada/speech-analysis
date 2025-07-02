@@ -157,6 +157,7 @@
 </head>
 <body>
     <div style="color:red;font-size:2em;text-align:center;">PRUEBA123</div>
+    <button onclick="debugSession()" style="position:fixed;top:10px;right:10px;z-index:1000;background:#ff4444;color:white;border:none;padding:10px;border-radius:5px;">Debug Session</button>
     <div class="container">
         <div class="logo">
             <img src="/static/crediclub_logo.png" alt="Crediclub" />
@@ -232,7 +233,7 @@
     }
     showStep(0);
     // Navegación entre pasos
-    document.getElementById('nextBtn1').onclick = ()=>{
+    document.getElementById('nextBtn1').onclick = async ()=>{
         const rfc = document.getElementById('rfc').value.trim().toUpperCase();
         const rfcRegex = /^([A-ZÑ&]{3,4})(\d{6})([A-Z\d]{3})$/;
         
@@ -253,7 +254,25 @@
             return;
         }
         
-        showStep(1);
+        // Guardar RFC en sesión inmediatamente
+        try {
+            const response = await fetch('/cliente_datos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    nombreCompleto: document.getElementById('nombreCompleto').value.trim(),
+                    nombreEmpresa: document.getElementById('nombreEmpresa').value.trim(),
+                    rfc: rfc
+                })
+            });
+            if (response.ok) {
+                showStep(1);
+            } else {
+                alert('Error al guardar los datos iniciales.');
+            }
+        } catch (e) {
+            alert('Error al guardar los datos iniciales.');
+        }
     };
     document.getElementById('nextBtn4').onclick = ()=>{
         if(document.getElementById('giroEmpresa').value.trim() && document.getElementById('numEmpleados').value>0) showStep(4);
@@ -261,10 +280,8 @@
     };
     document.getElementById('finishBtn').onclick = async ()=>{
         if(document.getElementById('objetivoCrediclub').value.trim()){
-            // Recolectar todos los datos
+            // Recolectar solo los datos adicionales (los básicos ya están guardados)
             const datos = {
-                nombreCompleto: document.getElementById('nombreCompleto').value.trim(),
-                nombreEmpresa: document.getElementById('nombreEmpresa').value.trim(),
                 rfc: document.getElementById('rfc').value.trim().toUpperCase(),
                 giroEmpresa: document.getElementById('giroEmpresa').value.trim(),
                 numEmpleados: document.getElementById('numEmpleados').value,
@@ -404,10 +421,13 @@
                 if (response.ok) {
                     showStep(2);
                 } else {
-                    alert('Error al subir el video.');
+                    const errorData = await response.json();
+                    console.error('Error response:', errorData);
+                    alert('Error al subir el video: ' + (errorData.error || 'Error desconocido'));
                 }
             } catch (e) {
-                alert('Error al subir el video.');
+                console.error('Error en fetch:', e);
+                alert('Error al subir el video: ' + e.message);
             }
         }
     });
@@ -453,13 +473,29 @@
                 if (response.ok) {
                     showStep(3);
                 } else {
-                    alert('Error al subir el video.');
+                    const errorData = await response.json();
+                    console.error('Error response:', errorData);
+                    alert('Error al subir el video: ' + (errorData.error || 'Error desconocido'));
                 }
             } catch (e) {
-                alert('Error al subir el video.');
+                console.error('Error en fetch:', e);
+                alert('Error al subir el video: ' + e.message);
             }
         }
     });
+    // Función de debug para verificar el estado de la sesión
+    async function debugSession() {
+        try {
+            const response = await fetch('/debug_session');
+            const data = await response.json();
+            console.log('Debug Session:', data);
+            alert(`Session Debug:\nRFC: ${data.rfc_in_session}\nAuthenticated: ${data.authenticated}\nUser ID: ${data.user_id}`);
+        } catch (e) {
+            console.error('Error en debug:', e);
+            alert('Error en debug: ' + e.message);
+        }
+    }
+    
     // Inicializar primer paso al cargar
     window.addEventListener('DOMContentLoaded', () => showStep(0));
     </script>
