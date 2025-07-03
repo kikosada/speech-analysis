@@ -258,7 +258,7 @@ def analyze():
         # Transcribir el video
         audio_wav = tmp.name + '.wav'
         subprocess.run([
-            'ffmpeg', '-y', '-i', tmp.name, '-vn', '-filter:a', 'atempo=2.0', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
+            'ffmpeg', '-y', '-i', tmp.name, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
         ], check=True)
         # Mostrar duración del audio extraído
         import wave
@@ -572,7 +572,7 @@ def cliente_upload():
                         # Extraer audio
                         audio_wav = tmp.name + '.wav'
                         subprocess.run([
-                            'ffmpeg', '-y', '-i', tmp.name, '-vn', '-filter:a', 'atempo=2.0', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
+                            'ffmpeg', '-y', '-i', tmp.name, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
                         ], check=True)
                         
                         # Mostrar duración del audio extraído
@@ -709,7 +709,7 @@ def api_cliente_upload():
         # Transcribir el video
         audio_wav = tmp.name + '.wav'
         subprocess.run([
-            'ffmpeg', '-y', '-i', tmp.name, '-vn', '-filter:a', 'atempo=2.0', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
+            'ffmpeg', '-y', '-i', tmp.name, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
         ], check=True)
         # Mostrar duración del audio extraído
         import wave
