@@ -59,8 +59,15 @@ class AzureTranscriber:
         logger.info("Iniciando transcripción continua...")
         speech_recognizer.start_continuous_recognition()
         
-        # Esperar a que termine
+        # Esperar a que termine con timeout
+        start_time = time.time()
+        timeout_seconds = 240  # 4 minutos máximo
+        
         while not done:
+            if time.time() - start_time > timeout_seconds:
+                logger.warning("Timeout alcanzado durante la transcripción")
+                speech_recognizer.stop_continuous_recognition()
+                break
             time.sleep(0.5)
         
         # Detener transcripción
@@ -109,7 +116,16 @@ class AzureTranscriber:
 
         done = False
         transcriber.start_transcribing_async().get()
+        
+        # Esperar a que termine con timeout
+        start_time = time.time()
+        timeout_seconds = 240  # 4 minutos máximo
+        
         while not done:
+            if time.time() - start_time > timeout_seconds:
+                logger.warning("Timeout alcanzado durante la transcripción completa")
+                transcriber.stop_transcribing_async().get()
+                break
             time.sleep(0.5)
         transcriber.stop_transcribing_async().get()
 
