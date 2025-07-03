@@ -701,46 +701,19 @@ def api_cliente_upload():
         result = transcriber.transcribe(audio_wav)
         transcript = result['text'] if isinstance(result, dict) and 'text' in result else str(result)
 
-        # Calificación automática simple (puedes mejorar la rúbrica después)
-        score = 1
-        texto = transcript.lower()
-        if any(pal in texto for pal in ['empresa', 'negocio', 'compañía']): score += 2
-        if any(pal in texto for pal in ['servicio', 'producto', 'ofrecemos', 'vendemos']): score += 2
-        if any(pal in texto for pal in ['mision', 'visión', 'valores']): score += 2
-        if len(transcript.split()) > 30: score += 2
-        if score > 10: score = 10
+        # Análisis con IA (GPT)
+        analysis_results = get_ai_analysis(transcript)
+        analysis_results["transcripcion"] = transcript
 
-        # Guardar transcripción y score como JSON
-        presentacion_json = BytesIO(json.dumps({"score": score, "transcripcion": transcript}, ensure_ascii=False, indent=2).encode('utf-8'))
+        # Guardar análisis como JSON
+        presentacion_json = BytesIO(json.dumps(analysis_results, ensure_ascii=False, indent=2).encode('utf-8'))
         presentacion_json_blob = folder_prefix + 'presentacion.json'
         print(f"Intentando guardar {presentacion_json_blob} en Azure para {folder_prefix}")
         blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=presentacion_json_blob)
         blob_client.upload_blob(presentacion_json, overwrite=True)
         print(f"¡Guardado exitoso de {presentacion_json_blob} en Azure para {folder_prefix}")
 
-        # Analizar el video (aquí va tu lógica de análisis)
-        # Por ahora, devolvemos un resultado de ejemplo
-        return jsonify({
-            'text': transcript,
-            'scores': {
-                'historia': 8,
-                'mision_vision': 7,
-                'productos': 9,
-                'valores': 8,
-                'mercado': 7,
-                'logros': 8,
-                'overall': 8
-            },
-            'feedback': [
-                'Mencionaste el nombre de la empresa.',
-                'Explicaste a qué se dedica.',
-                'Hablaste de productos/servicios.',
-                'Mencionaste misión, visión o valores.',
-                'Hablaste de logros o historia.',
-                'Duración adecuada.'
-            ],
-            'duration': 120
-        })
+        return jsonify(analysis_results)
     except Exception as e:
         logger.error(f"Error en /api/cliente/upload: {e}")
         return jsonify({'error': str(e)}), 500
