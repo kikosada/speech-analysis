@@ -260,6 +260,13 @@ def analyze():
         subprocess.run([
             'ffmpeg', '-y', '-i', tmp.name, '-vn', '-filter:a', 'atempo=2.0', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
         ], check=True)
+        # Mostrar duración del audio extraído
+        import wave
+        with wave.open(audio_wav, 'rb') as wav_file:
+            frames = wav_file.getnframes()
+            rate = wav_file.getframerate()
+            duration = frames / float(rate)
+            print('DURACIÓN DEL AUDIO EXTRAÍDO:', duration, 'segundos')
         transcriber = AzureTranscriber(
             speech_key=os.environ.get('AZURE_SPEECH_KEY'),
             service_region=os.environ.get('AZURE_SPEECH_REGION', 'eastus')
@@ -568,6 +575,14 @@ def cliente_upload():
                             'ffmpeg', '-y', '-i', tmp.name, '-vn', '-filter:a', 'atempo=2.0', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
                         ], check=True)
                         
+                        # Mostrar duración del audio extraído
+                        import wave
+                        with wave.open(audio_wav, 'rb') as wav_file:
+                            frames = wav_file.getnframes()
+                            rate = wav_file.getframerate()
+                            duration = frames / float(rate)
+                            print('DURACIÓN DEL AUDIO EXTRAÍDO:', duration, 'segundos')
+                        
                         # Transcribir
                         transcriber = AzureTranscriber(
                             speech_key=os.environ.get('AZURE_SPEECH_KEY'),
@@ -696,6 +711,13 @@ def api_cliente_upload():
         subprocess.run([
             'ffmpeg', '-y', '-i', tmp.name, '-vn', '-filter:a', 'atempo=2.0', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
         ], check=True)
+        # Mostrar duración del audio extraído
+        import wave
+        with wave.open(audio_wav, 'rb') as wav_file:
+            frames = wav_file.getnframes()
+            rate = wav_file.getframerate()
+            duration = frames / float(rate)
+            print('DURACIÓN DEL AUDIO EXTRAÍDO:', duration, 'segundos')
         transcriber = AzureTranscriber(
             speech_key=os.environ.get('AZURE_SPEECH_KEY'),
             service_region=os.environ.get('AZURE_SPEECH_REGION', 'eastus')
