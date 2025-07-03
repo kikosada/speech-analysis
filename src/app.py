@@ -36,13 +36,13 @@ def cliente_score():
         
         mensaje = ""
         if score >= 9:
-            mensaje = "¡Felicidades! Tu perfil es excepcional para Crediclub. Nos impresiona tu experiencia y visión clara del negocio. Nuestro equipo se pondrá en contacto contigo muy pronto para discutir las excelentes oportunidades de colaboración."
+            mensaje = "¡Nos gusta mucho tu empresa! Tu perfil es sólido y muestra una visión clara del negocio. Alguien de nuestro equipo te contactará pronto para conocerte mejor."
         elif score >= 7:
-            mensaje = "¡Excelente potencial! Tu perfil muestra una sólida base para colaborar con Crediclub. Valoramos tu experiencia y tenemos interés en explorar juntos las posibilidades. Pronto te contactaremos para profundizar en los detalles."
+            mensaje = "Tu empresa tiene muy buen potencial. Vemos varios aspectos interesantes que vale la pena explorar. Pronto alguien de nuestro equipo se pondrá en contacto contigo."
         elif score >= 5:
-            mensaje = "Gracias por tu interés en Crediclub. Hemos identificado áreas donde podríamos trabajar juntos para fortalecer la propuesta. Te contactaremos para discutir cómo podemos ayudarte a alcanzar tus objetivos."
+            mensaje = "Gracias por compartir tu información con Crediclub. Hemos detectado algunas áreas con oportunidad de mejora. Te contactaremos para profundizar un poco más y entender mejor tu enfoque."
         else:
-            mensaje = "Agradecemos tu acercamiento a Crediclub. Para poder evaluar mejor tu propuesta, necesitaríamos más información sobre tu experiencia y objetivos. Nuestro equipo te contactará para programar una conversación más detallada."
+            mensaje = "Agradecemos tu interés en Crediclub. Por ahora, necesitamos más información y claridad sobre tu empresa para poder evaluarla adecuadamente. Si lo deseas, puedes reintentar en un mes."
 
         return jsonify({
             "score": round(score, 1),

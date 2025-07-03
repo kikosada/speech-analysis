@@ -337,7 +337,7 @@ AZURE_SPEECH_REGION=eastus
 OPENAI_API_KEY=tu-clave-openai
 
 # API Key para autenticación
-API_KEY=tu-api-key-secreta
+API_KEY=la_clave_secreta_de_kiko
 
 # JWT Secret
 JWT_SECRET_KEY=tu-jwt-secret
