@@ -272,6 +272,7 @@ def analyze():
             service_region=os.environ.get('AZURE_SPEECH_REGION', 'eastus')
         )
         result = transcriber.transcribe(audio_wav)
+        print('RESULTADO CRUDO DE TRANSCRIPCIÓN:', result)
         # Usar utterances si existen, si no usar text
         if isinstance(result, dict) and 'utterances' in result and result['utterances']:
             transcript = ' '.join([utt['text'] for utt in result['utterances']])
@@ -594,6 +595,7 @@ def cliente_upload():
                             service_region=os.environ.get('AZURE_SPEECH_REGION', 'eastus')
                         )
                         result = transcriber.transcribe(audio_wav)
+                        print('RESULTADO CRUDO DE TRANSCRIPCIÓN:', result)
                         # Usar utterances si existen, si no usar text
                         if isinstance(result, dict) and 'utterances' in result and result['utterances']:
                             transcript = ' '.join([utt['text'] for utt in result['utterances']])
@@ -733,6 +735,7 @@ def api_cliente_upload():
             service_region=os.environ.get('AZURE_SPEECH_REGION', 'eastus')
         )
         result = transcriber.transcribe(audio_wav)
+        print('RESULTADO CRUDO DE TRANSCRIPCIÓN:', result)
         # Usar utterances si existen, si no usar text
         if isinstance(result, dict) and 'utterances' in result and result['utterances']:
             transcript = ' '.join([utt['text'] for utt in result['utterances']])
