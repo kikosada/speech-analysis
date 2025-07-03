@@ -266,6 +266,7 @@ def analyze():
         )
         result = transcriber.transcribe(audio_wav)
         transcript = result['text'] if isinstance(result, dict) and 'text' in result else str(result)
+        print('TRANSCRIPCIÓN COMPLETA:', transcript)
 
         # Calificación automática simple (puedes mejorar la rúbrica después)
         score = 1
@@ -574,6 +575,7 @@ def cliente_upload():
                         )
                         result = transcriber.transcribe(audio_wav)
                         transcript = result['text'] if isinstance(result, dict) and 'text' in result else str(result)
+                        print('TRANSCRIPCIÓN COMPLETA:', transcript)
 
                         # Análisis con IA
                         analysis_results = get_ai_analysis(transcript)
@@ -700,6 +702,7 @@ def api_cliente_upload():
         )
         result = transcriber.transcribe(audio_wav)
         transcript = result['text'] if isinstance(result, dict) and 'text' in result else str(result)
+        print('TRANSCRIPCIÓN COMPLETA:', transcript)
 
         # Análisis con IA (GPT)
         analysis_results = get_ai_analysis(transcript)
