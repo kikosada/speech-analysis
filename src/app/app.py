@@ -272,8 +272,13 @@ def analyze():
             service_region=os.environ.get('AZURE_SPEECH_REGION', 'eastus')
         )
         result = transcriber.transcribe(audio_wav)
-        transcript = result['text'] if isinstance(result, dict) and 'text' in result else str(result)
-        print('TRANSCRIPCIÓN COMPLETA:', transcript)
+        # Usar utterances si existen, si no usar text
+        if isinstance(result, dict) and 'utterances' in result and result['utterances']:
+            transcript = ' '.join([utt['text'] for utt in result['utterances']])
+            print('TRANSCRIPCIÓN CONCATENADA DE UTTERANCES:', transcript)
+        else:
+            transcript = result['text'] if isinstance(result, dict) and 'text' in result else str(result)
+            print('TRANSCRIPCIÓN COMPLETA:', transcript)
 
         # Calificación automática simple (puedes mejorar la rúbrica después)
         score = 1
@@ -589,8 +594,13 @@ def cliente_upload():
                             service_region=os.environ.get('AZURE_SPEECH_REGION', 'eastus')
                         )
                         result = transcriber.transcribe(audio_wav)
-                        transcript = result['text'] if isinstance(result, dict) and 'text' in result else str(result)
-                        print('TRANSCRIPCIÓN COMPLETA:', transcript)
+                        # Usar utterances si existen, si no usar text
+                        if isinstance(result, dict) and 'utterances' in result and result['utterances']:
+                            transcript = ' '.join([utt['text'] for utt in result['utterances']])
+                            print('TRANSCRIPCIÓN CONCATENADA DE UTTERANCES:', transcript)
+                        else:
+                            transcript = result['text'] if isinstance(result, dict) and 'text' in result else str(result)
+                            print('TRANSCRIPCIÓN COMPLETA:', transcript)
 
                         # Análisis con IA
                         analysis_results = get_ai_analysis(transcript)
@@ -723,8 +733,13 @@ def api_cliente_upload():
             service_region=os.environ.get('AZURE_SPEECH_REGION', 'eastus')
         )
         result = transcriber.transcribe(audio_wav)
-        transcript = result['text'] if isinstance(result, dict) and 'text' in result else str(result)
-        print('TRANSCRIPCIÓN COMPLETA:', transcript)
+        # Usar utterances si existen, si no usar text
+        if isinstance(result, dict) and 'utterances' in result and result['utterances']:
+            transcript = ' '.join([utt['text'] for utt in result['utterances']])
+            print('TRANSCRIPCIÓN CONCATENADA DE UTTERANCES:', transcript)
+        else:
+            transcript = result['text'] if isinstance(result, dict) and 'text' in result else str(result)
+            print('TRANSCRIPCIÓN COMPLETA:', transcript)
 
         # Análisis con IA (GPT)
         analysis_results = get_ai_analysis(transcript)
