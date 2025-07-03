@@ -1,6 +1,7 @@
 import azure.cognitiveservices.speech as speechsdk
 import os
 import logging
+import time
 from .transcribe import analyze_company_knowledge  # Importar función de análisis
 
 logger = logging.getLogger(__name__)
@@ -13,34 +14,74 @@ class AzureTranscriber:
             raise ValueError("La clave de Azure Speech o la región no están configuradas.")
 
     def transcribe(self, audio_path):
-        logger.info(f"Iniciando transcripción para: {audio_path}")
+        """
+        Transcribe un archivo de audio completo usando transcripción continua.
+        Este método reemplaza recognize_once() que solo transcribe hasta el primer silencio.
+        """
+        logger.info(f"Iniciando transcripción completa para: {audio_path}")
+        
         speech_config = speechsdk.SpeechConfig(subscription=self.speech_key, region=self.service_region)
         speech_config.speech_recognition_language = 'es-MX'
         
         audio_config = speechsdk.audio.AudioConfig(filename=audio_path)
         speech_recognizer = speechsdk.SpeechRecognizer(speech_config=speech_config, audio_config=audio_config)
         
-        result = speech_recognizer.recognize_once()
-
-        if result.reason == speechsdk.ResultReason.RecognizedSpeech:
-            logger.info(f"Transcripción exitosa. Texto: '{result.text[:30]}...'")
-            return {'text': result.text}
-        elif result.reason == speechsdk.ResultReason.NoMatch:
-            logger.warning("No se pudo reconocer voz en el audio (NoMatch). Puede que esté en silencio o haya mucho ruido.")
-            return {'text': ''}
-        elif result.reason == speechsdk.ResultReason.Canceled:
-            cancellation_details = result.cancellation_details
-            logger.error(f"La transcripción fue cancelada. Razón: {cancellation_details.reason}")
-            if cancellation_details.reason == speechsdk.CancellationReason.Error:
-                logger.error(f"Detalles del error: {cancellation_details.error_details}")
-            return {'text': '', 'error': str(cancellation_details.reason)}
+        # Variables para almacenar resultados
+        all_results = []
+        done = False
         
-        logger.error(f"La transcripción falló por una razón desconocida: {result.reason}")
-        return {'text': ''}
+        def recognized(evt):
+            """Callback cuando se reconoce una frase"""
+            if evt.result.text:
+                all_results.append(evt.result.text)
+                logger.info(f"Fragmento transcrito: {evt.result.text[:50]}...")
+        
+        def session_stopped(evt):
+            """Callback cuando termina la sesión"""
+            nonlocal done
+            logger.info("Sesión de transcripción terminada")
+            done = True
+        
+        def canceled(evt):
+            """Callback si se cancela la transcripción"""
+            nonlocal done
+            logger.error(f"Transcripción cancelada: {evt.result.reason}")
+            if evt.result.reason == speechsdk.CancellationReason.Error:
+                logger.error(f"Detalles del error: {evt.result.cancellation_details.error_details}")
+            done = True
+        
+        # Conectar callbacks
+        speech_recognizer.recognized.connect(recognized)
+        speech_recognizer.session_stopped.connect(session_stopped)
+        speech_recognizer.canceled.connect(canceled)
+        
+        # Iniciar transcripción continua
+        logger.info("Iniciando transcripción continua...")
+        speech_recognizer.start_continuous_recognition()
+        
+        # Esperar a que termine
+        while not done:
+            time.sleep(0.5)
+        
+        # Detener transcripción
+        speech_recognizer.stop_continuous_recognition()
+        
+        # Combinar todos los resultados
+        full_text = " ".join(all_results)
+        
+        if full_text:
+            logger.info(f"Transcripción completa exitosa. Longitud: {len(full_text)} caracteres")
+            return {'text': full_text}
+        else:
+            logger.warning("No se pudo transcribir ningún texto del audio")
+            return {'text': ''}
 
     def transcribe_full(self, audio_path):
+        """
+        Método alternativo usando ConversationTranscriber para transcripciones con múltiples hablantes.
+        """
         speech_config = speechsdk.SpeechConfig(subscription=self.speech_key, region=self.service_region)
-        speech_config.speech_recognition_language = 'es-ES'  # Forzar español
+        speech_config.speech_recognition_language = 'es-MX'
         audio_config = speechsdk.audio.AudioConfig(filename=audio_path)
         transcriber = speechsdk.transcription.ConversationTranscriber(speech_config=speech_config, audio_config=audio_config)
 
@@ -68,7 +109,6 @@ class AzureTranscriber:
 
         done = False
         transcriber.start_transcribing_async().get()
-        import time
         while not done:
             time.sleep(0.5)
         transcriber.stop_transcribing_async().get()
