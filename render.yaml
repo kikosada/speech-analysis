@@ -3,7 +3,7 @@ services:
     name: verano
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: PYTHONPATH=src gunicorn --timeout 300 --workers 2 --worker-class sync --preload-app app:app
+    startCommand: PYTHONPATH=src gunicorn --timeout 300 --workers 2 --worker-class sync --preload app:app
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
