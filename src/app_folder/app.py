@@ -599,7 +599,10 @@ def cliente_upload():
 
             # Procesamiento asíncrono en thread
             def procesar_video_async(rfc, filename):
+                temp_files = []  # Lista para trackear archivos temporales
                 try:
+                    print(f"=== INICIANDO PROCESAMIENTO DE {filename} PARA RFC: {rfc} ===")
+                    
                     azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
                     azure_account_key = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
                     azure_container_name = os.environ.get('AZURE_CONTAINER_NAME', 'clientai')
@@ -607,14 +610,20 @@ def cliente_upload():
                     blob_service_client = BlobServiceClient.from_connection_string(connect_str)
 
                     # Descargar el video
+                    print(f"Descargando video desde Azure: {rfc}/{filename}")
                     video_blob_name = f"{rfc}/{filename}"
                     video_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=video_blob_name)
+                    
                     with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as tmp:
+                        temp_files.append(tmp.name)
                         video_data = video_blob_client.download_blob()
                         video_data.readinto(tmp)
+                        print(f"Video descargado: {tmp.name}")
                         
                         # Extraer audio
                         audio_wav = tmp.name + '.wav'
+                        temp_files.append(audio_wav)
+                        print(f"Extrayendo audio a: {audio_wav}")
                         subprocess.run([
                             'ffmpeg', '-y', '-i', tmp.name, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audio_wav
                         ], check=True)
@@ -625,49 +634,130 @@ def cliente_upload():
                             frames = wav_file.getnframes()
                             rate = wav_file.getframerate()
                             duration = frames / float(rate)
-                            print('DURACIÓN DEL AUDIO EXTRAÍDO:', duration, 'segundos')
+                            print(f'DURACIÓN DEL AUDIO EXTRAÍDO: {duration} segundos')
                         
                         # Transcribir
+                        print("Iniciando transcripción con Azure Speech...")
                         transcriber = AzureTranscriber(
                             speech_key=os.environ.get('AZURE_SPEECH_KEY'),
                             service_region=os.environ.get('AZURE_SPEECH_REGION', 'eastus')
                         )
                         result = transcriber.transcribe(audio_wav)
-                        print('RESULTADO CRUDO DE TRANSCRIPCIÓN:', result)
-                        # Usar utterances si existen, si no usar text
+                        print(f'RESULTADO CRUDO DE TRANSCRIPCIÓN: {result}')
+                        
+                        # Extraer transcripción
                         if isinstance(result, dict) and 'utterances' in result and result['utterances']:
                             transcript = ' '.join([utt['text'] for utt in result['utterances']])
-                            print('TRANSCRIPCIÓN CONCATENADA DE UTTERANCES:', transcript)
+                            print(f'TRANSCRIPCIÓN CONCATENADA DE UTTERANCES: {transcript}')
                         else:
                             transcript = result['text'] if isinstance(result, dict) and 'text' in result else str(result)
-                            print('TRANSCRIPCIÓN COMPLETA:', transcript)
+                            print(f'TRANSCRIPCIÓN COMPLETA: {transcript}')
+
+                        # Verificar que tenemos transcripción
+                        if not transcript or not transcript.strip():
+                            print("ADVERTENCIA: La transcripción está vacía")
+                            transcript = "No se pudo transcribir el audio. Posibles causas: audio muy corto, sin voz, o problemas de calidad."
 
                         # Análisis con IA
+                        print("Iniciando análisis con OpenAI...")
                         analysis_results = get_ai_analysis(transcript)
 
                         if not analysis_results:
-                            raise Exception("El análisis con IA falló y no devolvió resultados.")
+                            print("ERROR: El análisis con IA falló, creando análisis por defecto...")
+                            # Crear análisis por defecto si falla
+                            analysis_results = {
+                                "score": 0,
+                                "scores": {
+                                    "claridad_mision": 0,
+                                    "comprension_problema": 0,
+                                    "conocimiento_mercado": 0,
+                                    "solidez_producto": 0
+                                },
+                                "feedback": {
+                                    "claridad_mision": "Error en el análisis automático. Por favor, contacta soporte.",
+                                    "comprension_problema": "Error en el análisis automático. Por favor, contacta soporte.",
+                                    "conocimiento_mercado": "Error en el análisis automático. Por favor, contacta soporte.",
+                                    "solidez_producto": "Error en el análisis automático. Por favor, contacta soporte."
+                                },
+                                "resumen_general": "Error en el análisis automático. Por favor, contacta soporte."
+                            }
 
+                        # Agregar transcripción al resultado
                         analysis_results["transcripcion"] = transcript
+                        analysis_results["duracion_audio"] = duration
+                        analysis_results["fecha_procesamiento"] = datetime.now().isoformat()
+
+                        print(f"Análisis final: Score={analysis_results.get('score', 0)}, Transcripción={len(transcript)} caracteres")
 
                         # Subir presentacion.json
+                        print(f"Subiendo presentacion.json a Azure: {rfc}/presentacion.json")
                         results_json = BytesIO(json.dumps(analysis_results, ensure_ascii=False, indent=2).encode('utf-8'))
                         presentacion_json_blob = f"{rfc}/presentacion.json"
                         blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=presentacion_json_blob)
                         blob_client.upload_blob(results_json, overwrite=True)
+                        print("¡presentacion.json subido exitosamente!")
 
                         # Actualizar status.json
-                        status_data = BytesIO(json.dumps({"status": "done"}, ensure_ascii=False).encode('utf-8'))
+                        print("Actualizando status.json a 'done'")
+                        status_data = BytesIO(json.dumps({"status": "done", "fecha_completado": datetime.now().isoformat()}, ensure_ascii=False).encode('utf-8'))
                         status_blob = f"{rfc}/status.json"
                         status_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=status_blob)
                         status_blob_client.upload_blob(status_data, overwrite=True)
+                        print("=== PROCESAMIENTO COMPLETADO EXITOSAMENTE ===")
 
                 except Exception as e:
-                    logger.error(f"Error en procesar_video_async: {e}")
-                    error_data = BytesIO(json.dumps({"status": "error", "error": str(e)}, ensure_ascii=False).encode('utf-8'))
-                    status_blob = f"{rfc}/status.json"
-                    status_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=status_blob)
-                    status_blob_client.upload_blob(error_data, overwrite=True)
+                    print(f"ERROR en procesar_video_async: {e}")
+                    import traceback
+                    print(f"Traceback completo: {traceback.format_exc()}")
+                    
+                    # Crear resultado de error
+                    error_result = {
+                        "score": 0,
+                        "scores": {
+                            "claridad_mision": 0,
+                            "comprension_problema": 0,
+                            "conocimiento_mercado": 0,
+                            "solidez_producto": 0
+                        },
+                        "feedback": {
+                            "claridad_mision": f"Error en el procesamiento: {str(e)}",
+                            "comprension_problema": f"Error en el procesamiento: {str(e)}",
+                            "conocimiento_mercado": f"Error en el procesamiento: {str(e)}",
+                            "solidez_producto": f"Error en el procesamiento: {str(e)}"
+                        },
+                        "resumen_general": f"Error en el procesamiento del video: {str(e)}",
+                        "transcripcion": "No se pudo procesar el video debido a un error técnico.",
+                        "error": str(e),
+                        "fecha_procesamiento": datetime.now().isoformat()
+                    }
+                    
+                    try:
+                        # Intentar subir el resultado de error
+                        print("Subiendo resultado de error a presentacion.json")
+                        error_json = BytesIO(json.dumps(error_result, ensure_ascii=False, indent=2).encode('utf-8'))
+                        presentacion_json_blob = f"{rfc}/presentacion.json"
+                        blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=presentacion_json_blob)
+                        blob_client.upload_blob(error_json, overwrite=True)
+                        
+                        # Actualizar status.json con error
+                        error_status = BytesIO(json.dumps({"status": "error", "error": str(e), "fecha_error": datetime.now().isoformat()}, ensure_ascii=False).encode('utf-8'))
+                        status_blob = f"{rfc}/status.json"
+                        status_blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=status_blob)
+                        status_blob_client.upload_blob(error_status, overwrite=True)
+                        print("Resultado de error subido exitosamente")
+                    except Exception as upload_error:
+                        print(f"Error al subir resultado de error: {upload_error}")
+                
+                finally:
+                    # Limpiar archivos temporales
+                    print("Limpiando archivos temporales...")
+                    for temp_file in temp_files:
+                        try:
+                            if os.path.exists(temp_file):
+                                os.unlink(temp_file)
+                                print(f"Archivo temporal eliminado: {temp_file}")
+                        except Exception as cleanup_error:
+                            print(f"Error eliminando archivo temporal {temp_file}: {cleanup_error}")
 
             thread = threading.Thread(target=procesar_video_async, args=(rfc, filename))
             thread.start()
@@ -851,21 +941,71 @@ def api_cliente_me():
 
 @app.route('/api/cliente/status/<rfc>', methods=['GET'])
 def api_cliente_status(rfc):
-    from azure.storage.blob import BlobServiceClient
-    azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
-    azure_account_key = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
-    azure_container_name = os.environ.get('AZURE_CONTAINER_NAME', 'clientai')
-    connect_str = f"DefaultEndpointsProtocol=https;AccountName={azure_account_name};AccountKey={azure_account_key};EndpointSuffix=core.windows.net"
-    blob_service_client = BlobServiceClient.from_connection_string(connect_str)
-    status_blob = f"{rfc}/status.json"
+    """Endpoint para verificar el estado del procesamiento de un RFC"""
     try:
-        blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=status_blob)
-        status_json = blob_client.download_blob().readall()
-        import json
-        status_data = json.loads(status_json.decode("utf-8"))
-        return jsonify(status_data)
+        azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
+        azure_account_key = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
+        azure_container_name = os.environ.get('AZURE_CONTAINER_NAME', 'clientai')
+        connect_str = f"DefaultEndpointsProtocol=https;AccountName={azure_account_name};AccountKey={azure_account_key};EndpointSuffix=core.windows.net"
+        blob_service_client = BlobServiceClient.from_connection_string(connect_str)
+
+        # Verificar si existe status.json
+        status_blob = f"{rfc}/status.json"
+        try:
+            blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=status_blob)
+            status_data = blob_client.download_blob().readall()
+            status = json.loads(status_data.decode("utf-8"))
+        except Exception:
+            status = {"status": "not_found", "message": "No se encontró información de procesamiento para este RFC"}
+
+        # Verificar si existe presentacion.json
+        presentacion_blob = f"{rfc}/presentacion.json"
+        try:
+            blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=presentacion_blob)
+            presentacion_data = blob_client.download_blob().readall()
+            presentacion = json.loads(presentacion_data.decode("utf-8"))
+            has_presentacion = True
+        except Exception:
+            presentacion = None
+            has_presentacion = False
+
+        return jsonify({
+            "rfc": rfc,
+            "status": status,
+            "has_presentacion": has_presentacion,
+            "presentacion": presentacion if has_presentacion else None
+        })
+
     except Exception as e:
-        return jsonify({"status": "not_found", "error": str(e)})
+        logger.error(f"Error en api_cliente_status: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/cliente/download/<rfc>/presentacion.json', methods=['GET'])
+def api_cliente_download_presentacion(rfc):
+    """Endpoint para descargar directamente el JSON de presentación"""
+    try:
+        azure_account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
+        azure_account_key = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
+        azure_container_name = os.environ.get('AZURE_CONTAINER_NAME', 'clientai')
+        connect_str = f"DefaultEndpointsProtocol=https;AccountName={azure_account_name};AccountKey={azure_account_key};EndpointSuffix=core.windows.net"
+        blob_service_client = BlobServiceClient.from_connection_string(connect_str)
+
+        presentacion_blob = f"{rfc}/presentacion.json"
+        blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=presentacion_blob)
+        
+        # Descargar el JSON
+        json_data = blob_client.download_blob().readall()
+        
+        # Crear respuesta con headers apropiados para descarga
+        response = jsonify(json.loads(json_data.decode("utf-8")))
+        response.headers['Content-Disposition'] = f'attachment; filename=presentacion_{rfc}.json'
+        response.headers['Content-Type'] = 'application/json'
+        
+        return response
+
+    except Exception as e:
+        logger.error(f"Error descargando presentacion.json para {rfc}: {e}")
+        return jsonify({"error": f"No se pudo descargar el archivo: {str(e)}"}), 404
 
 @app.route('/debug_session')
 @login_required
