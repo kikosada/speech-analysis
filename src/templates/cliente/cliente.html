@@ -153,6 +153,19 @@
                 max-width: 400px;
             }
         }
+        .spinner {
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg);}
+            100% { transform: rotate(360deg);}
+        }
     </style>
 </head>
 <body>
@@ -211,6 +224,11 @@
             <div id="finalMsg" style="text-align:center;font-size:1.2em;color:#1976d2;margin-top:2em;">
             ¡Gracias! Tus respuestas han sido enviadas correctamente.
             </div>
+            <div id="procesandoMsg" style="display:none;text-align:center;font-size:1.1em;color:#1976d2;margin-top:1.5em;">
+              <div class="spinner" style="margin: 0 auto 16px auto;"></div>
+              Procesando información... Esto puede tardar unos minutos.
+            </div>
+            <div id="resultadoMsg" style="display:none;text-align:center;margin-top:1.5em;"></div>
         </div>
     </div>
     <script>
@@ -295,45 +313,13 @@
                     body: JSON.stringify(datos)
                 });
                 if (response.ok) {
-                    // Consultar el score y mostrar mensaje personalizado
-                    try {
-                        const resScore = await fetch('/cliente_score');
-                        const dataScore = await resScore.json();
-                        if (resScore.ok) {
-                            document.getElementById('finalMsg').innerHTML = `<b>¡Gracias por llenar la encuesta!</b><br>${dataScore.mensaje}`;
-                            document.getElementById('finalMsg').style.display = 'block';
-                            setTimeout(() => {
-                                const el = document.getElementById('finalMsg');
-                                el.style.display = 'block';
-                                if (!el.innerHTML.trim()) {
-                                    el.innerHTML = '<b>¡Gracias por llenar la encuesta!</b><br>¡Tus respuestas han sido enviadas correctamente.';
-                                }
-                            }, 500);
-                            showStep(6);
-                        } else {
-                            document.getElementById('finalMsg').innerHTML = '<b>¡Gracias por llenar la encuesta!</b><br>¡Tus respuestas han sido enviadas correctamente.';
-                            document.getElementById('finalMsg').style.display = 'block';
-                            setTimeout(() => {
-                                const el = document.getElementById('finalMsg');
-                                el.style.display = 'block';
-                                if (!el.innerHTML.trim()) {
-                                    el.innerHTML = '<b>¡Gracias por llenar la encuesta!</b><br>¡Tus respuestas han sido enviadas correctamente.';
-                                }
-                            }, 500);
-                            showStep(6);
-                        }
-                    } catch (e) {
-                        document.getElementById('finalMsg').innerHTML = '<b>¡Gracias por llenar la encuesta!</b><br>¡Tus respuestas han sido enviadas correctamente.';
-                    document.getElementById('finalMsg').style.display = 'block';
-                        setTimeout(() => {
-                            const el = document.getElementById('finalMsg');
-                            el.style.display = 'block';
-                            if (!el.innerHTML.trim()) {
-                                el.innerHTML = '<b>¡Gracias por llenar la encuesta!</b><br>¡Tus respuestas han sido enviadas correctamente.';
-                            }
-                        }, 500);
-                        showStep(6);
-                    }
+                    // Mostrar pantalla de procesamiento
+                    showStep(6);
+                    document.getElementById('finalMsg').style.display = 'none';
+                    document.getElementById('procesandoMsg').style.display = 'block';
+                    document.getElementById('resultadoMsg').style.display = 'none';
+                    // Iniciar polling para esperar el resultado
+                    esperarResultado(datos.rfc);
                 } else {
                     alert('Error al guardar los datos.');
                 }
@@ -498,6 +484,56 @@
     
     // Inicializar primer paso al cargar
     window.addEventListener('DOMContentLoaded', () => showStep(0));
+    // --- Polling para esperar el resultado de la presentación ---
+    function esperarResultado(rfc) {
+      let intentos = 0;
+      let maxIntentos = 30; // 5 minutos si consultas cada 10s
+      function checarStatus() {
+        fetch(`/api/cliente/status/${rfc}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.has_presentacion && data.presentacion) {
+              document.getElementById('procesandoMsg').style.display = 'none';
+              document.getElementById('resultadoMsg').style.display = 'block';
+              // Personaliza cómo mostrar el resultado aquí:
+              const presentacion = data.presentacion;
+              let html = `<h2>¡Listo! Aquí está tu resultado:</h2>`;
+              html += `<b>Score general:</b> ${presentacion.score || 0} <br><br>`;
+              if (presentacion.scores) {
+                html += `<b>Detalle de criterios:</b><ul>`;
+                for (const [k,v] of Object.entries(presentacion.scores)) {
+                  html += `<li><b>${k.replace('_',' ')}:</b> ${v}</li>`;
+                }
+                html += `</ul>`;
+              }
+              if (presentacion.feedback) {
+                html += `<b>Retroalimentación:</b><ul>`;
+                for (const [k,v] of Object.entries(presentacion.feedback)) {
+                  html += `<li><b>${k.replace('_',' ')}:</b> ${v}</li>`;
+                }
+                html += `</ul>`;
+              }
+              if (presentacion.resumen_general) {
+                html += `<b>Resumen general:</b><br>${presentacion.resumen_general}<br>`;
+              }
+              document.getElementById('resultadoMsg').innerHTML = html;
+            } else if (intentos < maxIntentos) {
+              intentos++;
+              setTimeout(checarStatus, 10000); // espera 10 segundos y vuelve a intentar
+            } else {
+              document.getElementById('procesandoMsg').style.display = 'none';
+              document.getElementById('resultadoMsg').style.display = 'block';
+              document.getElementById('resultadoMsg').innerHTML = '<p style="color:red;">Hubo un problema, intenta más tarde.</p>';
+            }
+          })
+          .catch(() => {
+            document.getElementById('procesandoMsg').style.display = 'none';
+            document.getElementById('resultadoMsg').style.display = 'block';
+            document.getElementById('resultadoMsg').innerHTML = '<p style="color:red;">Hubo un problema, intenta más tarde.</p>';
+          });
+      }
+      checarStatus();
+    }
     </script>
 </body>
 </html> 
