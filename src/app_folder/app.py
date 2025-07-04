@@ -58,12 +58,56 @@ if missing_vars:
     raise ValueError(error_msg)
 
 # --- Configuración de Azure AI Video Indexer ---
-SUBSCRIPTION_KEY = os.environ.get("VIDEO_INDEXER_SUBSCRIPTION_KEY")
-ACCOUNT_ID = os.environ.get("VIDEO_INDEXER_ACCOUNT_ID")
-LOCATION = os.environ.get("VIDEO_INDEXER_LOCATION")
+# SUBSCRIPTION_KEY = os.environ.get("VIDEO_INDEXER_SUBSCRIPTION_KEY")
+# ACCOUNT_ID = os.environ.get("VIDEO_INDEXER_ACCOUNT_ID")
+# LOCATION = os.environ.get("VIDEO_INDEXER_LOCATION")
 
-BASE_AUTH_URL = f"https://api.videoindexer.ai/Auth/{LOCATION}/Accounts/{ACCOUNT_ID}"
-BASE_API_URL = f"https://api.videoindexer.ai/{LOCATION}/Accounts/{ACCOUNT_ID}"
+# BASE_AUTH_URL = f"https://api.videoindexer.ai/Auth/{{LOCATION}}/Accounts/{{ACCOUNT_ID}}"
+# BASE_API_URL = f"https://api.videoindexer.ai/{{LOCATION}}/Accounts/{{ACCOUNT_ID}}"
+
+# def get_azure_ad_token():
+#     """Obtiene un token de Azure AD para Video Indexer usando client credentials."""
+#     tenant_id = os.environ.get('AZURE_TENANT_ID')
+#     client_id = os.environ.get('AZURE_CLIENT_ID')
+#     client_secret = os.environ.get('AZURE_CLIENT_SECRET')
+#     token_url = f"https://login.microsoftonline.com/{{tenant_id}}/oauth2/v2.0/token"
+#     data = {
+#         "grant_type": "client_credentials",
+#         "client_id": client_id,
+#         "client_secret": client_secret,
+#         "scope": "https://api.videoindexer.ai/.default"
+#     }
+#     resp = requests.post(token_url, data=data)
+#     resp.raise_for_status()
+#     return resp.json()["access_token"]
+
+# def indexar_workspace_en_azure(video_url, video_name):
+#     try:
+#         if not all([VIDEO_INDEXER_ACCOUNT_ID, VIDEO_INDEXER_LOCATION]):
+#             logger.warning("Video Indexer no configurado, omitiendo indexación de workspace.")
+#             return None
+#
+#         access_token = get_azure_ad_token()
+#         params = {
+#             'name': video_name,
+#             'videoUrl': video_url,
+#             'privacy': 'Private',
+#             'indexingPreset': 'Advanced',
+#             'language': 'es-ES'
+#         }
+#         upload_response = requests.post(
+#             f"{BASE_API_URL}/Videos",
+#             params=params,
+#             headers={'Authorization': f'Bearer {access_token}'}
+#         )
+#         upload_response.raise_for_status()
+#         response_data = upload_response.json()
+#         logger.info(f"Video Indexer respondió con: {response_data}")
+#         return response_data.get('id')
+#
+#     except Exception as e:
+#         logger.error(f"Error al indexar workspace en Azure Video Indexer: {e}")
+#         return None
 
 app = Flask(__name__,
     template_folder='../templates',
@@ -420,54 +464,54 @@ def cliente():
     return render_template('cliente.html', rfc=session.get('rfc'))
 
 # --- Lógica de Azure Video Indexer ---
-VIDEO_INDEXER_ACCOUNT_ID = os.getenv("VIDEO_INDEXER_ACCOUNT_ID")
-VIDEO_INDEXER_LOCATION = os.getenv("VIDEO_INDEXER_LOCATION", 'trial')
+# VIDEO_INDEXER_ACCOUNT_ID = os.getenv("VIDEO_INDEXER_ACCOUNT_ID")
+# VIDEO_INDEXER_LOCATION = os.getenv("VIDEO_INDEXER_LOCATION", 'trial')
 
-BASE_API_URL = f"https://api.videoindexer.ai/{VIDEO_INDEXER_LOCATION}/Accounts/{VIDEO_INDEXER_ACCOUNT_ID}"
+# BASE_API_URL = f"https://api.videoindexer.ai/{VIDEO_INDEXER_LOCATION}/Accounts/{VIDEO_INDEXER_ACCOUNT_ID}"
 
-def get_azure_ad_token():
-    """Obtiene un token de Azure AD para Video Indexer usando client credentials."""
-    tenant_id = os.environ.get('AZURE_TENANT_ID')
-    client_id = os.environ.get('AZURE_CLIENT_ID')
-    client_secret = os.environ.get('AZURE_CLIENT_SECRET')
-    token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
-    data = {
-        "grant_type": "client_credentials",
-        "client_id": client_id,
-        "client_secret": client_secret,
-        "scope": "https://api.videoindexer.ai/.default"
-    }
-    resp = requests.post(token_url, data=data)
-    resp.raise_for_status()
-    return resp.json()["access_token"]
+# def get_azure_ad_token():
+#     """Obtiene un token de Azure AD para Video Indexer usando client credentials."""
+#     tenant_id = os.environ.get('AZURE_TENANT_ID')
+#     client_id = os.environ.get('AZURE_CLIENT_ID')
+#     client_secret = os.environ.get('AZURE_CLIENT_SECRET')
+#     token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+#     data = {
+#         "grant_type": "client_credentials",
+#         "client_id": client_id,
+#         "client_secret": client_secret,
+#         "scope": "https://api.videoindexer.ai/.default"
+#     }
+#     resp = requests.post(token_url, data=data)
+#     resp.raise_for_status()
+#     return resp.json()["access_token"]
 
-def indexar_workspace_en_azure(video_url, video_name):
-    try:
-        if not all([VIDEO_INDEXER_ACCOUNT_ID, VIDEO_INDEXER_LOCATION]):
-            logger.warning("Video Indexer no configurado, omitiendo indexación de workspace.")
-            return None
-
-        access_token = get_azure_ad_token()
-        params = {
-            'name': video_name,
-            'videoUrl': video_url,
-            'privacy': 'Private',
-            'indexingPreset': 'Advanced',
-            'language': 'es-ES'
-        }
-        upload_response = requests.post(
-            f"{BASE_API_URL}/Videos",
-            params=params,
-            headers={'Authorization': f'Bearer {access_token}'}
-        )
-        upload_response.raise_for_status()
-        response_data = upload_response.json()
-        logger.info(f"Video Indexer respondió con: {response_data}")
-        return response_data.get('id')
-
-    except Exception as e:
-        logger.error(f"Error al indexar workspace en Azure Video Indexer: {e}")
-        return None
+# def indexar_workspace_en_azure(video_url, video_name):
+#     try:
+#         if not all([VIDEO_INDEXER_ACCOUNT_ID, VIDEO_INDEXER_LOCATION]):
+#             logger.warning("Video Indexer no configurado, omitiendo indexación de workspace.")
+#             return None
+#
+#         access_token = get_azure_ad_token()
+#         params = {
+#             'name': video_name,
+#             'videoUrl': video_url,
+#             'privacy': 'Private',
+#             'indexingPreset': 'Advanced',
+#             'language': 'es-ES'
+#         }
+#         upload_response = requests.post(
+#             f"{BASE_API_URL}/Videos",
+#             params=params,
+#             headers={'Authorization': f'Bearer {access_token}'}
+#         )
+#         upload_response.raise_for_status()
+#         response_data = upload_response.json()
+#         logger.info(f"Video Indexer respondió con: {response_data}")
+#         return response_data.get('id')
+#
+#     except Exception as e:
+#         logger.error(f"Error al indexar workspace en Azure Video Indexer: {e}")
+#         return None
 
 @app.route('/cliente_upload', methods=['POST'])
 @login_required
@@ -599,6 +643,7 @@ def cliente_upload():
 
             # Procesamiento asíncrono en thread
             def procesar_video_async(rfc, filename):
+                import tempfile
                 temp_files = []  # Lista para trackear archivos temporales
                 try:
                     print(f"=== INICIANDO PROCESAMIENTO DE {filename} PARA RFC: {rfc} ===")
@@ -1264,7 +1309,7 @@ def cliente_score():
             elif score >= 4:
                 mensaje = "Gracias por tu presentación. Se notan los fundamentos de tu idea de negocio. Hemos identificado algunas áreas que se pueden fortalecer y te contactaremos para platicar sobre cómo podemos apoyarte."
             else:
-                mensaje = "Gracias por tu presentación. Para poder evaluar mejor tu propuesta, te recomendamos estructurar con más claridad tus ideas sobre el problema que resuelves y tu mercado. Nuestro equipo se pondrá en contacto contigo."
+                mensaje = "Gracias por tu presentación. Para poder evaluar mejor tu propuesta, te recomendamos estructurar con más claridad tus ideas sobre el problema que resuelves y tu mercado."
 
             return jsonify({
                 "score": score,
@@ -1324,42 +1369,43 @@ def evaluar_workspace_visual(insights_json):
 
     return score, feedback, tipo_inmueble
 
-@app.route('/api/video-insights/<video_id>', methods=['GET'])
-def get_video_insights(video_id):
-    try:
-        access_token = get_azure_ad_token()
-        insights_response = requests.get(
-            f"{BASE_API_URL}/Videos/{video_id}/Index",
-            headers={'Authorization': f'Bearer {access_token}'},
-            params={
-                'language': 'es-ES',
-                'includeBreakdowns': 'true',
-                'includeSpeechTranscript': 'true',
-                'includeFace': 'true',
-                'includeKeywords': 'true',
-                'includeSentiment': 'true',
-                'includeTextualContent': 'true',
-                'includeTopics': 'true',
-                'includeSpeakers': 'true',
-            }
-        )
-        insights_response.raise_for_status()
-        insights_data = insights_response.json()
-        # Evaluar el workspace basado en la rúbrica visual
-        score, feedback, tipo_inmueble = evaluar_workspace_visual(insights_data)
-        # Añadir el score y feedback al resultado
-        insights_data['workspace_score'] = score
-        insights_data['workspace_feedback'] = feedback
-        insights_data['tipo_inmueble'] = tipo_inmueble
-        # Guardar el resultado en un archivo JSON en Azure Blob Storage
-        workspace_json = BytesIO(json.dumps(insights_data, ensure_ascii=False, indent=2).encode('utf-8'))
-        workspace_json_blob = f"{video_id}/workspace.json"
-        blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=workspace_json_blob)
-        blob_client.upload_blob(workspace_json, overwrite=True)
-        return jsonify(insights_data)
-    except Exception as e:
-        print(f"Error obteniendo insights: {e}")
-        return jsonify({"error": f"No se pudo obtener insights: {e}"}), 500
+# --- Endpoint de insights de video ---
+# @app.route('/api/video-insights/<video_id>', methods=['GET'])
+# def get_video_insights(video_id):
+#     try:
+#         access_token = get_azure_ad_token()
+#         insights_response = requests.get(
+#             f"{BASE_API_URL}/Videos/{video_id}/Index",
+#             headers={'Authorization': f'Bearer {access_token}'},
+#             params={
+#                 'language': 'es-ES',
+#                 'includeBreakdowns': 'true',
+#                 'includeSpeechTranscript': 'true',
+#                 'includeFace': 'true',
+#                 'includeKeywords': 'true',
+#                 'includeSentiment': 'true',
+#                 'includeTextualContent': 'true',
+#                 'includeTopics': 'true',
+#                 'includeSpeakers': 'true',
+#             }
+#         )
+#         insights_response.raise_for_status()
+#         insights_data = insights_response.json()
+#         # Evaluar el workspace basado en la rúbrica visual
+#         score, feedback, tipo_inmueble = evaluar_workspace_visual(insights_data)
+#         # Añadir el score y feedback al resultado
+#         insights_data['workspace_score'] = score
+#         insights_data['workspace_feedback'] = feedback
+#         insights_data['tipo_inmueble'] = tipo_inmueble
+#         # Guardar el resultado en un archivo JSON en Azure Blob Storage
+#         workspace_json = BytesIO(json.dumps(insights_data, ensure_ascii=False, indent=2).encode('utf-8'))
+#         workspace_json_blob = f"{video_id}/workspace.json"
+#         blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=workspace_json_blob)
+#         blob_client.upload_blob(workspace_json, overwrite=True)
+#         return jsonify(insights_data)
+#     except Exception as e:
+#         print(f"Error obteniendo insights: {e}")
+#         return jsonify({"error": f"No se pudo obtener insights: {e}"}), 500
 
 @app.route('/cliente_upload_chunk', methods=['POST'])
 def cliente_upload_chunk():
