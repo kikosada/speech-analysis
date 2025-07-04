@@ -526,10 +526,11 @@ def cliente_upload():
             print(f'Error subiendo video a Azure: {e}')
             return jsonify({"error": f"Error al subir el video: {str(e)}"}), 500
 
-        # Si es workspace.webm, extraer frames para análisis AI
+        # Si es workspace.webm, extraer frames para análisis AI y lanzar análisis visual
         if filename == 'workspace.webm':
             import tempfile
             import subprocess
+            import time
             frames_dir = tempfile.mkdtemp(prefix='frames_')
             try:
                 # Descargar el archivo temporalmente
@@ -547,9 +548,52 @@ def cliente_upload():
                 ]
                 subprocess.run(cmd, check=True)
                 print(f"Frames extraídos en: {frames_dir}")
-                # Aquí puedes agregar el análisis con OpenAI cuando esté listo
+                # Lanzar análisis visual con Video Indexer
+                # 1. Obtener URL SAS del video
+                sas_token = generate_blob_sas(
+                    account_name=azure_account_name,
+                    container_name=azure_container_name,
+                    blob_name=video_blob_name,
+                    account_key=azure_account_key,
+                    permission=BlobSasPermissions(read=True),
+                    expiry=datetime.utcnow() + timedelta(hours=1)
+                )
+                video_url = f"https://{azure_account_name}.blob.core.windows.net/{azure_container_name}/{video_blob_name}?{sas_token}"
+                print(f"URL SAS para Video Indexer: {video_url}")
+                # 2. Indexar el video
+                video_id = indexar_workspace_en_azure(video_url, filename)
+                print(f"Video ID de Video Indexer: {video_id}")
+                if video_id:
+                    # 3. Esperar a que el análisis esté listo
+                    access_token = get_video_indexer_access_token()
+                    for _ in range(30):  # Esperar hasta 5 minutos (10s x 30)
+                        status_resp = requests.get(
+                            f"{BASE_API_URL}/Videos/{video_id}/Index",
+                            params={'accessToken': access_token}
+                        )
+                        status_resp.raise_for_status()
+                        status_data = status_resp.json()
+                        state = status_data.get('state', '')
+                        print(f"Estado de análisis de Video Indexer: {state}")
+                        if state == 'Processed':
+                            # 4. Guardar el JSON visual
+                            score, feedback, tipo_inmueble = evaluar_workspace_visual(status_data)
+                            status_data['workspace_score'] = score
+                            status_data['workspace_feedback'] = feedback
+                            status_data['tipo_inmueble'] = tipo_inmueble
+                            workspace_json = BytesIO(json.dumps(status_data, ensure_ascii=False, indent=2).encode('utf-8'))
+                            workspace_json_blob = f"{rfc}/workspace.json"
+                            blob_client = blob_service_client.get_blob_client(container=azure_container_name, blob=workspace_json_blob)
+                            blob_client.upload_blob(workspace_json, overwrite=True)
+                            print(f"workspace.json guardado en Azure para {rfc}")
+                            break
+                        time.sleep(10)
+                    else:
+                        print("Timeout esperando el análisis de Video Indexer")
+                else:
+                    print("No se pudo indexar el video en Video Indexer")
             except Exception as e:
-                print(f"Error extrayendo frames de workspace.webm: {e}")
+                print(f"Error extrayendo frames o analizando workspace.webm: {e}")
 
         # Solo procesar y transcribir si el archivo es 'presentacion.webm'
         if filename == 'presentacion.webm':
