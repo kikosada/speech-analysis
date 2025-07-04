@@ -644,6 +644,8 @@ def cliente_upload():
             # Procesamiento asíncrono en thread
             def procesar_video_async(rfc, filename):
                 import tempfile
+                import subprocess
+                import time
                 temp_files = []  # Lista para trackear archivos temporales
                 try:
                     print(f"=== INICIANDO PROCESAMIENTO DE {filename} PARA RFC: {rfc} ===")
